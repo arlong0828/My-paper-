@@ -445,6 +445,16 @@ def selection(population_size,front,chroms_obj_record,best = False):
     
     return population_list,new_pop
 
+def calculate_satellite_demand(instance , customer_group):
+    satellite_demand = 0
+    for j in range(len(customer_group)):
+        for i in range(len(instance)):
+            if instance[i][0] == customer_group[j]:
+                if instance[i][5] != None and instance[i][6] != None:
+                    satellite_demand += instance[i][5] + instance[i][6]
+    return satellite_demand
+
+
 class NSGAAlgorithm(object):
 
     def __init__(self):
@@ -476,6 +486,7 @@ class NSGAAlgorithm(object):
         self.all_time = 0
         self.FE_all_cost = 0
         self.SE_all_cost = 0
+        self.satellite_demand = []
 
     def load_instance(self):
         wb = openpyxl.load_workbook("./data/real_data.xlsx")
@@ -1153,27 +1164,37 @@ class NSGAAlgorithm(object):
         
         front = non_dominated_sorting(self.all_morning_customer_id_and_fitness1)
         best_all_morning_customer_id_and_fitness1=selection(self.pop_size,front[0],self.all_morning_customer_id_and_fitness1 , best=True)
+        self.satellite_demand.append(calculate_satellite_demand(self.json_instance , best_all_morning_customer_id_and_fitness1[0][0]))
+
         if self.all_morning_customer_id_and_fitness2:
             front = non_dominated_sorting(self.all_morning_customer_id_and_fitness2)
             best_all_morning_customer_id_and_fitness2=selection(self.pop_size,front[0],self.all_morning_customer_id_and_fitness2 , best=True)
+            self.satellite_demand.append(calculate_satellite_demand(self.json_instance , best_all_morning_customer_id_and_fitness2[0][0]))
         if self.all_morning_customer_id_and_fitness3:
             front = non_dominated_sorting(self.all_morning_customer_id_and_fitness3)
             best_all_morning_customer_id_and_fitness3=selection(self.pop_size,front[0],self.all_morning_customer_id_and_fitness3 , best=True)
+            self.satellite_demand.append(calculate_satellite_demand(self.json_instance , best_all_morning_customer_id_and_fitness3[0][0]))
         if self.all_morning_customer_id_and_fitness4:
             front = non_dominated_sorting(self.all_morning_customer_id_and_fitness4)
             best_all_morning_customer_id_and_fitness4=selection(self.pop_size,front[0],self.all_morning_customer_id_and_fitness4 , best=True)
+            self.satellite_demand.append(calculate_satellite_demand(self.json_instance , best_all_morning_customer_id_and_fitness4[0][0]))
 
         front = non_dominated_sorting(self.all_afternoon_customer_id_and_fitness1)
         best_all_afternoon_customer_id_and_fitness1=selection(self.pop_size,front[0],self.all_afternoon_customer_id_and_fitness1 , best=True)
+        self.satellite_demand[0] += calculate_satellite_demand(self.json_instance , best_all_afternoon_customer_id_and_fitness1[0][0])
         if self.all_afternoon_customer_id_and_fitness2:
             front = non_dominated_sorting(self.all_afternoon_customer_id_and_fitness2)
             best_all_afternoon_customer_id_and_fitness2=selection(self.pop_size,front[0],self.all_afternoon_customer_id_and_fitness2 , best=True)
+            self.satellite_demand[1] += calculate_satellite_demand(self.json_instance , best_all_afternoon_customer_id_and_fitness2[0][0])
         if self.all_afternoon_customer_id_and_fitness3:
             front = non_dominated_sorting(self.all_afternoon_customer_id_and_fitness3)
             best_all_afternoon_customer_id_and_fitness3=selection(self.pop_size,front[0],self.all_afternoon_customer_id_and_fitness3 , best=True)
+            self.satellite_demand[2] += calculate_satellite_demand(self.json_instance , best_all_afternoon_customer_id_and_fitness3[0][0])
         if self.all_afternoon_customer_id_and_fitness4:
             front = non_dominated_sorting(self.all_afternoon_customer_id_and_fitness4)
             best_all_afternoon_customer_id_and_fitness4=selection(self.pop_size,front[0],self.all_afternoon_customer_id_and_fitness4 , best=True)
+            self.satellite_demand[3] += calculate_satellite_demand(self.json_instance , best_all_afternoon_customer_id_and_fitness4[0][0])
+
         if self.number_satellite == 1:
             self.all_number_vehicles = sum([best_all_morning_customer_id_and_fitness1[0][1][0] , best_all_afternoon_customer_id_and_fitness1[0][1][0]])
             self.SE_all_cost = sum([best_all_morning_customer_id_and_fitness1[0][1][1] , best_all_afternoon_customer_id_and_fitness1[0][1][1]])
@@ -1193,7 +1214,7 @@ class NSGAAlgorithm(object):
 
     def First_route(self):
         gurobi_Model = FE_gurobi()
-        self.FE_all_cost = gurobi_Model.main(self.depot , self.number_satellite , self.centers , list(range(0,self.number_satellite)) ,[1000]*self.number_satellite , self.fe_vehicle_capacity)
+        self.FE_all_cost = gurobi_Model.main(self.depot , self.number_satellite , self.centers , list(range(0,self.number_satellite)) , self.satellite_demand , self.fe_vehicle_capacity)
 
     def Computation_time(self):
         self.all_time = time.time() -  self.start_time
@@ -1246,7 +1267,7 @@ if __name__ == "__main__":
     start, end = 0, 99
     for day in range(1 , 31):
         crossover_stats = []
-        for s in range(1 , 5):
+        for s in range(1 , 4):
             model = NSGAAlgorithm()
             model.start_customer_number = start
             model.end_customer_number = end
