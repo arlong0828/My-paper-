@@ -1193,7 +1193,7 @@ class NSGAAlgorithm(object):
 
     def First_route(self):
         gurobi_Model = FE_gurobi()
-        self.FE_all_cost = gurobi_Model.main(self.depot , self.number_satellite , self.centers , list(range(0,self.number_satellite)) ,[1000,1000] , self.fe_vehicle_capacity)
+        self.FE_all_cost = gurobi_Model.main(self.depot , self.number_satellite , self.centers , list(range(0,self.number_satellite)) ,[1000]*self.number_satellite , self.fe_vehicle_capacity)
 
     def Computation_time(self):
         self.all_time = time.time() -  self.start_time
@@ -1206,7 +1206,7 @@ class NSGAAlgorithm(object):
         self.initial_population()
         self.runGenerations()
         self.result()
-        # self.First_route()
+        self.First_route()
         self.Computation_time()
 
 if __name__ == "__main__":
@@ -1256,7 +1256,7 @@ if __name__ == "__main__":
             model.day = day
             model.runMain()
             total_cost = model.FE_all_cost + model.SE_all_cost
-            print(f"第{day}天")
+            print(f"第{day}天 , 衛星數：{model.number_satellite}")
             print(f"總成本：{total_cost} 總車輛數：{model.all_number_vehicles}")
             print(f"交配率：{data[day - 1][1]} 突變率：{data[day - 1][2]}")
             crossover_stats.append((s, total_cost))
