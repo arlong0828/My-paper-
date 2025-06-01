@@ -153,9 +153,9 @@ class FE_gurobi:
             #     if c.IISConstr:
             #         print(f'{c.constrName}')
             print("no solution")
-    def main(self , depots,number_satellite , centers , satellite_cost , V_CAP):
+    def main(self , depots,number_satellite , centers ,K ,satellite_cost ,V_CAP):
         N, I, J, C, Q, XY = self.read_csv_file(depots,number_satellite , centers , satellite_cost)
-        K = list(range(0,2))
+        
         # print(N, I, J, K, Q, V_CAP, C,XY)
         Cost = self.solve_model(N, I, J, K, Q, V_CAP, C,XY)
         return Cost
