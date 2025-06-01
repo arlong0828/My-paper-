@@ -1230,59 +1230,93 @@ class NSGAAlgorithm(object):
         self.First_route()
         self.Computation_time()
 
+# if __name__ == "__main__":
+#     print("Running file directly, Executing nsga2vrp")
+#     data = [
+#     [1,  0.9,  0.5],
+#     [2,  0.5,  0.3],
+#     [3,  0.8,  0.2],
+#     [4,  0.7,  0.3],
+#     [5,  0.75, 0.2],
+#     [6,  0.9,  0.4],
+#     [7,  0.75, 0.5],
+#     [8,  0.8,  0.2],
+#     [9,  0.75, 0.5],
+#     [10, 0.75, 0.3],
+#     [11, 0.85, 0.1],
+#     [12, 0.7,  0.4],
+#     [13, 0.85, 0.1],
+#     [14, 0.75, 0.3],
+#     [15, 0.9,  0.5],
+#     [16, 0.8,  0.5],
+#     [17, 0.75, 0.1],
+#     [18, 0.85, 0.3],
+#     [19, 0.75, 0.3],
+#     [20, 0.85, 0.3],
+#     [21, 0.8,  0.3],
+#     [22, 0.9, 0.1],
+#     [23, 0.75, 0.2],
+#     [24, 0.85, 0.1],
+#     [25, 0.8,  0.1],
+#     [26, 0.9,  0.1],
+#     [27, 0.85, 0.2],
+#     [28, 0.9, 0.1],
+#     [29, 0.85,  0.5],
+#     [30, 0.75,  0.2]
+#     ]
+#     start, end = 0, 99
+#     for day in range(1 , 31):
+#         crossover_stats = []
+#         for s in range(1 , 4):
+#             model = NSGAAlgorithm()
+#             model.start_customer_number = start
+#             model.end_customer_number = end
+#             model.number_satellite = s
+#             model.crossover_probability = data[day - 1][1]
+#             model.mut_prob = data[day - 1][2]
+#             model.day = day
+#             model.runMain()
+#             total_cost = model.FE_all_cost + model.SE_all_cost
+#             print(f"第{day}天 , 衛星數：{model.number_satellite}")
+#             print(f"總成本：{total_cost} 總車輛數：{model.all_number_vehicles}")
+#             print(f"交配率：{data[day - 1][1]} 突變率：{data[day - 1][2]}")
+#             crossover_stats.append((s, total_cost))
+#         best_S, best_avg = min(crossover_stats, key=lambda x: x[1])
+#         print(f"====== 第{day}天最佳衛星數 ======")
+#         print(f"最佳衛星數：{best_S}  對應總成本：{best_avg}")
+#         print("===================================")
+#         start, end = start + 100, end + 100
 if __name__ == "__main__":
     print("Running file directly, Executing nsga2vrp")
     data = [
-    [1,  0.9,  0.5],
-    [2,  0.5,  0.3],
-    [3,  0.8,  0.2],
-    [4,  0.7,  0.3],
-    [5,  0.75, 0.2],
-    [6,  0.9,  0.4],
-    [7,  0.75, 0.5],
-    [8,  0.8,  0.2],
-    [9,  0.75, 0.5],
-    [10, 0.75, 0.3],
-    [11, 0.85, 0.1],
-    [12, 0.7,  0.4],
-    [13, 0.85, 0.1],
-    [14, 0.75, 0.3],
-    [15, 0.9,  0.5],
-    [16, 0.8,  0.5],
-    [17, 0.75, 0.1],
-    [18, 0.85, 0.3],
-    [19, 0.75, 0.3],
-    [20, 0.85, 0.3],
-    [21, 0.8,  0.3],
-    [22, 0.9, 0.1],
-    [23, 0.75, 0.2],
-    [24, 0.85, 0.1],
-    [25, 0.8,  0.1],
-    [26, 0.9,  0.1],
-    [27, 0.85, 0.2],
-    [28, 0.9, 0.1],
-    [29, 0.85,  0.5],
-    [30, 0.75,  0.2]
+        [1,  0.9,  0.5], [2,  0.5,  0.3], [3,  0.8,  0.2], [4,  0.7,  0.3], [5,  0.75, 0.2],
+        [6,  0.9,  0.4], [7,  0.75, 0.5], [8,  0.8,  0.2], [9,  0.75, 0.5], [10, 0.75, 0.3],
+        [11, 0.85, 0.1], [12, 0.7,  0.4], [13, 0.85, 0.1], [14, 0.75, 0.3], [15, 0.9,  0.5],
+        [16, 0.8,  0.5], [17, 0.75, 0.1], [18, 0.85, 0.3], [19, 0.75, 0.3], [20, 0.85, 0.3],
+        [21, 0.8,  0.3], [22, 0.9, 0.1], [23, 0.75, 0.2], [24, 0.85, 0.1], [25, 0.8,  0.1],
+        [26, 0.9,  0.1], [27, 0.85, 0.2], [28, 0.9, 0.1], [29, 0.85, 0.5], [30, 0.75, 0.2]
     ]
+
     start, end = 0, 99
-    for day in range(1 , 31):
-        crossover_stats = []
-        for s in range(1 , 4):
-            model = NSGAAlgorithm()
-            model.start_customer_number = start
-            model.end_customer_number = end
-            model.number_satellite = s
-            model.crossover_probability = data[day - 1][1]
-            model.mut_prob = data[day - 1][2]
-            model.day = day
-            model.runMain()
-            total_cost = model.FE_all_cost + model.SE_all_cost
-            print(f"第{day}天 , 衛星數：{model.number_satellite}")
-            print(f"總成本：{total_cost} 總車輛數：{model.all_number_vehicles}")
-            print(f"交配率：{data[day - 1][1]} 突變率：{data[day - 1][2]}")
-            crossover_stats.append((s, total_cost))
-        best_S, best_avg = min(crossover_stats, key=lambda x: x[1])
-        print(f"====== 第{day}天最佳衛星數 ======")
-        print(f"最佳衛星數：{best_S}  對應總成本：{best_avg}")
-        print("===================================")
-        start, end = start + 100, end + 100
+
+    with open("result.txt", "w", encoding="utf-8") as f:
+        f.write("Running file directly, Executing nsga2vrp\n")
+        for day in range(1 , 31):
+            crossover_stats = []
+            for s in range(1 , 4):
+                model = NSGAAlgorithm()
+                model.start_customer_number = start
+                model.end_customer_number = end
+                model.number_satellite = s
+                model.crossover_probability = data[day - 1][1]
+                model.mut_prob = data[day - 1][2]
+                model.day = day
+                model.runMain()
+                total_cost = model.FE_all_cost + model.SE_all_cost
+                f.write(f"第{day}天 & 衛星數：{model.number_satellite} & 總成本：{total_cost}\n")
+                crossover_stats.append((s, total_cost))
+            best_S, best_avg = min(crossover_stats, key=lambda x: x[1])
+            f.write(f"====== 第{day}天最佳衛星數 ======\n")
+            f.write(f"最佳衛星數：{best_S}  對應總成本：{best_avg}\n")
+            f.write("===================================\n\n")
+            start, end = start + 100, end + 100
