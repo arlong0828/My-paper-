@@ -1211,7 +1211,7 @@ class NSGAAlgorithm(object):
 
 if __name__ == "__main__":
     print("Running file directly, Executing nsga2vrp")
-    C = [
+    data = [
     [1,  0.9,  0.5],
     [2,  0.5,  0.3],
     [3,  0.8,  0.2],
@@ -1243,34 +1243,25 @@ if __name__ == "__main__":
     [29, 0.85,  0.5],
     [30, 0.75,  0.2]
     ]
-    start, end, M , = 2900, 2999, 0.1
-    for day in range(22 , 31):
+    start, end = 0, 99
+    for day in range(1 , 31):
         crossover_stats = []
-        for i in range(5):
-            costs, vehicles = [], []
-            for _ in range(3):
-                model = NSGAAlgorithm()
-                model.start_customer_number = start
-                model.end_customer_number = end
-                model.crossover_probability = C[day - 1][1]
-                model.mut_prob = M
-                model.day = day
-                model.runMain()
-                total_cost = model.FE_all_cost + model.SE_all_cost
-                costs.append(total_cost)
-                vehicles.append(model.all_number_vehicles)
-                print(f"總成本：{model.SE_all_cost} 總車輛數：{model.all_number_vehicles}")
-
-            avg_cost = np.mean(costs)
-            crossover_stats.append((M, avg_cost))
+        for s in range(1 , 5):
+            model = NSGAAlgorithm()
+            model.start_customer_number = start
+            model.end_customer_number = end
+            model.number_satellite = s
+            model.crossover_probability = data[day - 1][1]
+            model.mut_prob = data[day - 1][2]
+            model.day = day
+            model.runMain()
+            total_cost = model.FE_all_cost + model.SE_all_cost
             print(f"第{day}天")
-            print(f"交配率：{C[day - 1][1]} 突變率：{M}")
-            print(f"平均值：{avg_cost} 最小值：{np.min(costs)}")
-            # C = round(C - 0.05, 2)
-            M = round(M + 0.1 , 1)
-
-        best_C, best_avg = min(crossover_stats, key=lambda x: x[1])
-        print(f"====== 第{day}天最佳交配率 ======")
-        print(f"最佳突變率：{best_C}  對應平均總成本：{best_avg}")
+            print(f"總成本：{total_cost} 總車輛數：{model.all_number_vehicles}")
+            print(f"交配率：{data[day - 1][1]} 突變率：{data[day - 1][2]}")
+            crossover_stats.append((s, total_cost))
+        best_S, best_avg = min(crossover_stats, key=lambda x: x[1])
+        print(f"====== 第{day}天最佳衛星數 ======")
+        print(f"最佳衛星數：{best_S}  對應總成本：{best_avg}")
         print("===================================")
-        M, start, end = 0.1, start + 100, end + 100
+        start, end = start + 100, end + 100
