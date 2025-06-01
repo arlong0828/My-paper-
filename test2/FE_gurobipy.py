@@ -137,7 +137,7 @@ class FE_gurobi:
         # 避免车辆直接在车场间移动
         model.addConstrs( X[i,j,k] == 0 for i in J for j in J for k in K )
         # 求解
-        model.Params.TimeLimit = 300  # 设置求解时间上限
+        # model.Params.TimeLimit = 300  # 设置求解时间上限
         # model.Params.OutputFlag = 1
         model.Params.OutputFlag = 0 
         model.optimize()
@@ -156,5 +156,6 @@ class FE_gurobi:
     def main(self , depots,number_satellite , centers , satellite_cost , V_CAP):
         N, I, J, C, Q, XY = self.read_csv_file(depots,number_satellite , centers , satellite_cost)
         K = list(range(0,2))
+        # print(N, I, J, K, Q, V_CAP, C,XY)
         Cost = self.solve_model(N, I, J, K, Q, V_CAP, C,XY)
         return Cost

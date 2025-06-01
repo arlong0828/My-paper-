@@ -21,7 +21,8 @@ class FE_gurobi:
 
         # 處理衛星資料
         for i in range(number_satellite):
-            node_id = f's{i}' 
+            node_id = f's{i}'
+            # node_id = str(i)
             x, y = centers[i]
             cost = satellite_cost[i]  # 可選擇是否加入 Q[node_id] = cost
             I.append(node_id)
@@ -87,14 +88,15 @@ class FE_gurobi:
     #     plt.scatter( depot_point_x, depot_point_y, marker='*', c='r', s=100,zorder=1)
     #     plt.show()
     # 保存结果
-    def print_route_info(self, route_list, total_cost, C):
-        print("第一階段總費用：", total_cost)
-        print("{:<6} {:<30} {:<10}".format("車輛", "路徑", "距離"))
+    def print_route_info(self, route_list, total_cost, C , K):
+        # print("第一階段總費用：", total_cost * 0.2)
+        # print("{:<6} {:<30} {:<10}".format("車輛", "路徑", "距離"))
 
-        for idx, route in enumerate(route_list):
-            route_str = [str(i) for i in route]
-            dist = sum(C[route[i], route[i + 1]] for i in range(len(route) - 1))
-            print("{:<6} {:<30} {:<10.2f}".format(idx + 1, ' -> '.join(route_str), dist))
+        # for idx, route in enumerate(route_list):
+        #     route_str = [str(i) for i in route]
+        #     dist = sum(C[route[i], route[i + 1]] for i in range(len(route) - 1))
+        #     print("{:<6} {:<30} {:<10.2f}".format(idx + 1, ' -> '.join(route_str), dist))
+        return total_cost * 0.2 + len(K) * 80
     # 建模和求解
     def solve_model(self , N,I,J,K,Q,V_CAP,C,XY):
         """
@@ -127,26 +129,33 @@ class FE_gurobi:
         model.addConstrs( (quicksum(X[i,j,k] for i in I for j in J if i != j) == 1 for k in K), name='eq5' ) # 开放式
         # model.addConstrs( (quicksum(X[j,i,k] for i in I) == quicksum(X[i,j,k] for i in I) for k in K for j in J), name='eq5')  # 不开放式
         # 破除子环
+        # model.addConstrs(U[k, j] == 0 for k in K for j in J)
+        model.addConstrs(U[k, j] == 0 for k in K for j in J)  # 起點設為 0
         model.addConstrs(U[k, i] - U[k, j] + V_CAP * X[i, j, k] <= V_CAP - Q[i] for i in I for j in I for k in K)
         model.addConstrs(Q[i] <= U[k, i] for k in K for i in I)
         model.addConstrs(U[k, i] <= V_CAP for k in K for i in I)
         # 避免车辆直接在车场间移动
         model.addConstrs( X[i,j,k] == 0 for i in J for j in J for k in K )
         # 求解
-        model.Params.TimeLimit = 300  # 设置求解时间上限
+        # model.Params.TimeLimit = 300  # 设置求解时间上限
+        # model.Params.OutputFlag = 1
+        model.Params.OutputFlag = 0 
         model.optimize()
         if model.status == GRB.Status.OPTIMAL or model.status == GRB.Status.TIME_LIMIT:
             route_list = self.extract_routes(I,J,X,K)
             # self.draw_routes(route_list, XY, I,J)
-            self.print_route_info(route_list, model.objVal, C)
+            Cost = self.print_route_info(route_list, model.objVal, C , K)
+            return Cost
         else:
             model.computeIIS()
             model.write('model.ilp')
-            for c in model.getConstrs():
-                if c.IISConstr:
-                    print(f'{c.constrName}')
+            # for c in model.getConstrs():
+            #     if c.IISConstr:
+            #         print(f'{c.constrName}')
             print("no solution")
     def main(self , depots,number_satellite , centers , satellite_cost , V_CAP):
         N, I, J, C, Q, XY = self.read_csv_file(depots,number_satellite , centers , satellite_cost)
-        K = list(range(0,10))
-        self.solve_model(N, I, J, K, Q, V_CAP, C,XY)
+        K = list(range(0,2))
+        # print(N, I, J, K, Q, V_CAP, C,XY)
+        Cost = self.solve_model(N, I, J, K, Q, V_CAP, C,XY)
+        return Cost
