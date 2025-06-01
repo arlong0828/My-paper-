@@ -1,5 +1,12 @@
-import random , openpyxl , copy , time
-from haversine_python import haversine
+# 標準函式庫
+import random
+import copy
+import time
+
+# 外部函式庫
+import openpyxl
+import numpy as np
+import pandas as pd
 from sklearn.cluster import KMeans
 from operator import itemgetter
 import matplotlib.pyplot as plt
@@ -7,8 +14,11 @@ import cartopy.crs as ccrs
 import cartopy.feature as cfeature
 import geopandas as gpd
 from shapely.geometry import Point
-import pandas as pd
-import numpy as np
+
+# 距離計算函式庫
+from haversine_python import haversine
+
+# 自定義模組
 from FE_gurobipy import FE_gurobi
 
 random.seed(1)
@@ -203,20 +213,7 @@ def eval_indvidual_fitness(se_vehicle_speed , morning_customer_id , afternoon_cu
         number_afternoon_vehicles += 1
     return [number_morning_vehicles , round(morning_total_cost, 0)] , [number_afternoon_vehicles , round(afternoon_total_cost , 0)]
 
-
-# def single_exchange(ind1 , cross_prob):
-#     if random.random() <= cross_prob:
-#         ind2 = copy.deepcopy(ind1)
-#         a , b= random.sample(range(len(ind2)), 2)
-#         ind2[b] , ind2[a] = ind2[a] , ind2[b]
-#         return ind2
-#     return ind1
-
 def cxOrderedVrp(input_ind1, input_ind2):
-    # Modifying this to suit our needs
-    #  If the sequence does not contain 0, this throws error
-    #  So we will modify inputs here itself and then 
-    #       modify the outputs too
 
     ind1 = copy.deepcopy(input_ind1)
     ind2 = copy.deepcopy(input_ind2)
@@ -224,7 +221,6 @@ def cxOrderedVrp(input_ind1, input_ind2):
     a, b = random.sample(range(size), 2)
     if a > b:
         a, b = b, a
-    # print(a , b)
 
     holes1, holes2 = [True] * size, [True] * size
     for i in range(size):
@@ -232,7 +228,6 @@ def cxOrderedVrp(input_ind1, input_ind2):
             holes1[ind2.index(ind2[i])] = False
             holes2[ind1.index(ind1[i])] = False
 
-    # We must keep the original values somewhere before scrambling everything
     temp1, temp2 = ind1, ind2
     k1, k2 = b + 1, b + 1
     for i in range(size):
@@ -243,7 +238,6 @@ def cxOrderedVrp(input_ind1, input_ind2):
         if not holes2[input_ind1.index(temp2[(i + b + 1) % size])]:
             ind2[k2 % size] = temp2[(i + b + 1) % size]
             k2 += 1
-    # print(ind1 , ind2)
     for i in range(a, b + 1):
         ind1[i], ind2[i] = ind2[i], ind1[i]
 
@@ -338,7 +332,6 @@ def update_route(ind1 , se_vehicle_capacity , instace):
     return total_route
 
 def satellite_calculate_fitness(ind1 , se_vehicle_speed , se_vehicle_capacity , instace, time_vehicles , satellite):
-    # print(instace)
     num_vehicle = 0
     route = update_route(ind1 , se_vehicle_capacity , instace)
     num_vehicle = len(route)
@@ -351,10 +344,7 @@ def satellite_calculate_fitness(ind1 , se_vehicle_speed , se_vehicle_capacity , 
             if j == 0:
                 for ins in instace:
                     if ins[0] == i[j]:
-                        # print(time_vehicles2 , ins , cost)
-                        # print(satellite[1] , satellite[0] , ins[2] , ins[1] , calculate_distance(satellite[1] , satellite[0] , ins[2] , ins[1]))
                         time_vehicles2 , cost = calculate_time(time_vehicles2 , ins , calculate_distance(satellite[1] , satellite[0] , ins[2] , ins[1]) , se_vehicle_speed , cost)
-                        # print(time_vehicles2 , cost)
             else:
                 for z in range(len(instace)):
                     if instace[z][0] == i[j]:
@@ -455,7 +445,7 @@ def selection(population_size,front,chroms_obj_record,best = False):
     
     return population_list,new_pop
 
-class nsgaAlgo(object):
+class NSGAAlgorithm(object):
 
     def __init__(self):
         self.start_customer_number = 0
@@ -501,50 +491,30 @@ class nsgaAlgo(object):
     def filter_customers_in_china(self):
         df = pd.read_excel("./data/customer_data2.xlsx")
 
-        # 確認含有 'latitude' 和 'longitude' 欄位
         geometry = [Point(xy) for xy in zip(df['經度'], df['緯度'])]
         gdf = gpd.GeoDataFrame(df, geometry=geometry, crs="EPSG:4326")  # WGS84座標系統
 
-        # 載入世界國界（GeoPandas 內建世界地圖）
         world = gpd.read_file("./data/ne_110m_admin_0_countries.shp")
-        # 選出中國國界
         china = world[world['NAME'] == 'China']
 
-        # 精確判斷是否在中國內
         in_china = gdf[gdf.within(china.geometry.iloc[0])]
 
-        # 將在中國內的資料輸出為 Excel
         in_china.to_excel("filtered_customer_data_precise.xlsx", index=False)
     
 
     def show_customer_on_china_map(self):
-        # 原始顧客座標 + 擾動
         customer_lons = [i[1] + np.random.uniform(-0.02, 0.02) for i in self.json_instance]
         customer_lats = [i[2] + np.random.uniform(-0.02, 0.02) for i in self.json_instance]
 
-        # 倉庫座標
         depot_lons = [d[0] for d in self.depot]
         depot_lats = [d[1] for d in self.depot]
 
-        # 👉 合併兩者用來計算邊界範圍
         all_lons = customer_lons + depot_lons
         all_lats = customer_lats + depot_lats
-        # print(max(lons) , min(lons) , max(lats) , min(lats))
         fig = plt.figure(figsize=(10, 8))
         ax = plt.axes(projection=ccrs.PlateCarree())
-        # 自動計算留白範圍
-        lon_min, lon_max = min(all_lons), max(all_lons)
-        lat_min, lat_max = min(all_lats), max(all_lats)
-        lon_range = lon_max - lon_min
-        lat_range = lat_max - lat_min
-        padding_ratio = 0.05
-
         ax.set_extent([110.80054706818404 ,127.5746712695365, 21.25950285013494, 49.64801823827201
         ], crs=ccrs.PlateCarree())
-
-        # ax.set_extent([min(lons) - 2, max(lons) + 2, min(lats)-2 , max(lats)+2], crs=ccrs.PlateCarree())
-
-        # 地圖基本要素
         ax.add_feature(cfeature.LAND, facecolor='lightgray')
         ax.add_feature(cfeature.OCEAN, facecolor='aliceblue')
         ax.add_feature(cfeature.COASTLINE, linewidth=0.5, edgecolor='gray')
@@ -552,19 +522,13 @@ class nsgaAlgo(object):
         ax.add_feature(cfeature.LAKES, facecolor='white', edgecolor='lightblue', alpha=0.3)
         ax.add_feature(cfeature.RIVERS, edgecolor='lightblue', linewidth=0.4)
 
-        # 畫出顧客點（使用倒三角形）
         ax.scatter(customer_lons, customer_lats, color='black', marker='v', s=20, alpha=0.5,
            label='Customer', transform=ccrs.PlateCarree())
-
-        # 若要加亂數擾動避免完全重疊，先處理 lons/lats 為：
-
-        # ax.scatter(lons, lats, color='black', marker='v', s=100, label='Customer' , transform=ccrs.PlateCarree())
-
+        
         for i in range(len(self.depot)):
             label = 'Depot' if i == 0 else None
             ax.scatter([depot_lons[i]], [depot_lats[i]], color='red', marker='+', s=100,
                     label=label, transform=ccrs.PlateCarree())
-        # ax.set_title('Customer Distribution on China Map')
         ax.legend()
         plt.show()
         # plt.draw()
@@ -581,16 +545,10 @@ class nsgaAlgo(object):
             morning_customer , morning_customer_id , afternoon_customer , afternoon_customer_id= distinguish_between_periods(group_)
             morning_customer.insert(0 , self.centers[i])
             afternoon_customer.insert(0 , self.centers[i])
-            # print("上午客戶：" , morning_customer , "\n", "下午客戶：" ,afternoon_customer , "\n")
-            # print(morning_customer_id , "\n" , afternoon_customer_id , "\n")
             morning_distances , afternoon_distances = get_distance(morning_customer , afternoon_customer)
-            # print(morning_distances , "\n" , afternoon_distances , "\n")
             morning_savings , afternoon_savings = savingsAlgorithms(morning_distances , afternoon_distances , morning_customer_id , afternoon_customer_id)
-            # print(morning_savings , "\n" , afternoon_savings , "\n")
             morning_customer_id , afternoon_customer_id = getRoute(self.json_instance , morning_savings , afternoon_savings , morning_customer_id , afternoon_customer_id , self.se_vehicle_capacity)
             morning_customer_fitness , afternoon_customer_fitness = eval_indvidual_fitness(self.se_vehicle_speed , morning_customer_id , afternoon_customer_id, instace = self.json_instance , SatelliteCoordinates = self.centers[i] )
-            # print(morning_customer_fitness , afternoon_customer_fitness)
-            # print("早上客戶路線：" , morning_customer_id , "finess：" , morning_customer_fitness , "\n" , "下午客戶綠線：" , afternoon_customer_id , "finess：" , afternoon_customer_fitness) 
             for z in morning_customer_id:
                 all_satellite_morning_id += z
             if i == 0:
@@ -603,9 +561,6 @@ class nsgaAlgo(object):
                 self.all_afternoon_customer_id_and_fitness1.append([all_satellite_afternoon_id , afternoon_customer_fitness])
             elif i == 1:
                 self.all_afternoon_customer_id_and_fitness2.append([all_satellite_afternoon_id , afternoon_customer_fitness])
-
-        # print(self.all_morning_customer_id_and_fitness1 , "\n" , self.all_morning_customer_id_and_fitness2)
-        # print(self.all_afternoon_customer_id_and_fitness1 , "\n" , self.all_afternoon_customer_id_and_fitness2)
 
     def initial_population(self):
         if len(self.all_morning_customer_id_and_fitness1[0][0]) > 5:
@@ -684,8 +639,6 @@ class nsgaAlgo(object):
                     if find_smae(self.all_afternoon_customer_id_and_fitness2 , relocate_ind):
                         fitmess2 = satellite_calculate_fitness(relocate_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[1])
                         self.all_afternoon_customer_id_and_fitness2.append([relocate_ind , fitmess2])
-        # print(self.all_morning_customer_id_and_fitness1 , "\n" , self.all_morning_customer_id_and_fitness2)
-        # print(self.all_afternoon_customer_id_and_fitness1 , "\n" , self.all_afternoon_customer_id_and_fitness2)
 
     def runGenerations(self):
         for gen in range(self.num_gen):
@@ -797,73 +750,56 @@ class nsgaAlgo(object):
                         self.all_afternoon_customer_id_and_fitness2.append([relocate_ind , fitmess4])
                         del self.all_afternoon_customer_id_and_fitness2[i]
                         break
-            # print(self.all_morning_customer_id_and_fitness1 , "\n" , self.all_morning_customer_id_and_fitness2)
-            # print(self.all_afternoon_customer_id_and_fitness2)
+
             # 交配
             if len(self.all_morning_customer_id_and_fitness1[0][0]) > 5 and self.crossover_probability >= random.random():
                 while(len(self.all_morning_customer_id_and_fitness1) < 40):
                     for i in range(0 , len(self.all_morning_customer_id_and_fitness1) , 2):
                         if i + 1 < len(self.all_morning_customer_id_and_fitness1):
-                        # print(self.all_morning_customer_id_and_fitness1[i][0] , self.all_morning_customer_id_and_fitness1[i + 1][0])
                             ind1, ind2  = cxOrderedVrp(self.all_morning_customer_id_and_fitness1[i][0] , self.all_morning_customer_id_and_fitness1[i + 1][0])
-                            # print(ind1, ind2)
                             if find_smae(self.all_morning_customer_id_and_fitness1 , ind1):
                                 fitness1 = satellite_calculate_fitness(ind1 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[0])
                                 self.all_morning_customer_id_and_fitness1.append([ind1 , fitness1])
                             if find_smae(self.all_morning_customer_id_and_fitness1 , ind2):
                                 fitness2 = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[0])
                                 self.all_morning_customer_id_and_fitness1.append([ind2 , fitness2])
-            # print(self.all_morning_customer_id_and_fitness1)
-            # print(len(self.all_morning_customer_id_and_fitness1))
 
             if len(self.all_morning_customer_id_and_fitness2[0][0]) > 5 and self.crossover_probability >= random.random():
                 while(len(self.all_morning_customer_id_and_fitness2) < 40):
                     for i in range(0 , len(self.all_morning_customer_id_and_fitness2) , 2):
                         if i + 1 < len(self.all_morning_customer_id_and_fitness2):
-                        # print(self.all_morning_customer_id_and_fitness1[i][0] , self.all_morning_customer_id_and_fitness1[i + 1][0])
                             ind1, ind2  = cxOrderedVrp(self.all_morning_customer_id_and_fitness2[i][0] , self.all_morning_customer_id_and_fitness2[i + 1][0])
-                            # print(ind1, ind2)
                             if find_smae(self.all_morning_customer_id_and_fitness2 , ind1):
                                 fitness1 = satellite_calculate_fitness(ind1 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[1])
                                 self.all_morning_customer_id_and_fitness2.append([ind1 , fitness1])
                             if find_smae(self.all_morning_customer_id_and_fitness2 , ind2):
                                 fitness2 = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[1])
                                 self.all_morning_customer_id_and_fitness2.append([ind2 , fitness2])
-            # print(self.all_morning_customer_id_and_fitness2)
-            # print(len(self.all_morning_customer_id_and_fitness2))
 
             if len(self.all_afternoon_customer_id_and_fitness1[0][0]) > 5 and self.crossover_probability >= random.random():
                 while(len(self.all_afternoon_customer_id_and_fitness1) < 40):
                     for i in range(0 , len(self.all_afternoon_customer_id_and_fitness1) , 2):
                         if i + 1 < len(self.all_afternoon_customer_id_and_fitness1):
                         
-                        # print(self.all_morning_customer_id_and_fitness1[i][0] , self.all_morning_customer_id_and_fitness1[i + 1][0])
                             ind1, ind2  = cxOrderedVrp(self.all_afternoon_customer_id_and_fitness1[i][0] , self.all_afternoon_customer_id_and_fitness1[i + 1][0])
-                            # print(ind1, ind2)
                             if find_smae(self.all_afternoon_customer_id_and_fitness1 , ind1):
                                 fitness1 = satellite_calculate_fitness(ind1 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[0])
                                 self.all_afternoon_customer_id_and_fitness1.append([ind1 , fitness1])
                             if find_smae(self.all_afternoon_customer_id_and_fitness1 , ind2):
                                 fitness2 = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[0])
                                 self.all_afternoon_customer_id_and_fitness1.append([ind2 , fitness2])
-            # print(self.all_afternoon_customer_id_and_fitness1)
-            # print(len(self.all_afternoon_customer_id_and_fitness1))
 
             if len(self.all_afternoon_customer_id_and_fitness2[0][0]) > 5 and self.crossover_probability >= random.random():
                 while(len(self.all_afternoon_customer_id_and_fitness2) < 40):
                     for i in range(0 , len(self.all_afternoon_customer_id_and_fitness2) , 2):
                         if i + 1 < len(self.all_afternoon_customer_id_and_fitness2):
-                        # print(self.all_morning_customer_id_and_fitness1[i][0] , self.all_morning_customer_id_and_fitness1[i + 1][0])
                             ind1, ind2  = cxOrderedVrp(self.all_afternoon_customer_id_and_fitness2[i][0] , self.all_afternoon_customer_id_and_fitness2[i + 1][0])
-                            # print(ind1, ind2)
                             if find_smae(self.all_afternoon_customer_id_and_fitness2 , ind1):
                                 fitness1 = satellite_calculate_fitness(ind1 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[1])
                                 self.all_afternoon_customer_id_and_fitness2.append([ind1 , fitness1])
                             if find_smae(self.all_afternoon_customer_id_and_fitness2 , ind2):
                                 fitness2 = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[1])
                                 self.all_afternoon_customer_id_and_fitness2.append([ind2 , fitness2])
-            # print(self.all_afternoon_customer_id_and_fitness2)
-            # print(len(self.all_afternoon_customer_id_and_fitness2))
 
             # 突變
             if len(self.all_morning_customer_id_and_fitness1[0][0]) > 4:
@@ -873,7 +809,6 @@ class nsgaAlgo(object):
                         fitness = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[0])
                         self.all_morning_customer_id_and_fitness1.append([ind2 , fitness])
                         break
-            # print(self.all_morning_customer_id_and_fitness1)    
 
             if len(self.all_morning_customer_id_and_fitness2[0][0]) > 4:
                 for i in self.all_morning_customer_id_and_fitness2:
@@ -882,8 +817,7 @@ class nsgaAlgo(object):
                         fitness = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[1])
                         self.all_morning_customer_id_and_fitness2.append([ind2 , fitness]) 
                         break
-            # print(self.all_morning_customer_id_and_fitness2) 
-            #  
+            
             if len(self.all_afternoon_customer_id_and_fitness1[0][0]) > 4:
                 for i in self.all_afternoon_customer_id_and_fitness1:
                     ind2 = mutation(i[0] , self.mut_prob)
@@ -891,7 +825,6 @@ class nsgaAlgo(object):
                         fitness = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[0])  
                         self.all_afternoon_customer_id_and_fitness1.append([ind2 , fitness]) 
                         break
-            # print(self.all_afternoon_customer_id_and_fitness1)  
 
             if len(self.all_afternoon_customer_id_and_fitness2[0][0]) > 4:
                 for i in self.all_afternoon_customer_id_and_fitness2:
@@ -900,7 +833,6 @@ class nsgaAlgo(object):
                         fitness = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[1])         
                         self.all_afternoon_customer_id_and_fitness2.append([ind2 , fitness])  
                         break
-            # print(self.all_afternoon_customer_id_and_fitness2)
 
             # non-dominated sorting
             front = non_dominated_sorting(self.all_morning_customer_id_and_fitness1)
@@ -930,9 +862,6 @@ class nsgaAlgo(object):
             self.score_history.append((self.all_morning_customer_id_and_fitness1[0][1][1] + self.all_morning_customer_id_and_fitness2[0][1][1] + self.all_afternoon_customer_id_and_fitness1[0][1][1]+
                                       self.all_afternoon_customer_id_and_fitness2[0][1][1]))
 
-            # print((self.all_morning_customer_id_and_fitness1[0][1][1] + self.all_morning_customer_id_and_fitness2[0][1][1] + self.all_afternoon_customer_id_and_fitness1[0][1][1]+
-            #                           self.all_afternoon_customer_id_and_fitness2[0][1][1]))
-
     def result(self):
         
         front = non_dominated_sorting(self.all_morning_customer_id_and_fitness1)
@@ -946,53 +875,17 @@ class nsgaAlgo(object):
 
         front = non_dominated_sorting(self.all_afternoon_customer_id_and_fitness2)
         best_all_afternoon_customer_id_and_fitness2=selection(self.pop_size,front[0],self.all_afternoon_customer_id_and_fitness2 , best=True)
-
-        # print("衛星0的最短路徑:")
-        # print("上午：")
-        # for i in best_all_morning_customer_id_and_fitness1:
-        #     print(i)
-        # print("下午：")
-        # for i in best_all_afternoon_customer_id_and_fitness1:
-        #     print(i)
-
-        # print("衛星1的最短路徑：")
-        # print("上午：")
-        # for i in best_all_morning_customer_id_and_fitness2:
-        #     print(i)
-        # print("下午：")
-        # for i in best_all_afternoon_customer_id_and_fitness2:
-        #     print(i)
-        # print(best_all_morning_customer_id_and_fitness1[0][1][1])
-        self.all_cost = sum([best_all_morning_customer_id_and_fitness1[0][1][1] , best_all_afternoon_customer_id_and_fitness1[0][1][1] , best_all_morning_customer_id_and_fitness2[0][1][1]  , best_all_afternoon_customer_id_and_fitness2[0][1][1]])
+        
         self.all_number_vehicles = sum([best_all_morning_customer_id_and_fitness1[0][1][0] , best_all_afternoon_customer_id_and_fitness1[0][1][0] , best_all_morning_customer_id_and_fitness2[0][1][0]  , best_all_afternoon_customer_id_and_fitness2[0][1][0]])
-        # self.all_cost = sum([best_all_morning_customer_id_and_fitness1[0][1][1] , best_all_afternoon_customer_id_and_fitness1[0][1][1] , best_all_morning_customer_id_and_fitness2[0][1][1]  , best_all_afternoon_customer_id_and_fitness2[0][1][1]])
-        # print(sum([best_all_morning_customer_id_and_fitness1[0][1][1] , best_all_afternoon_customer_id_and_fitness1[0][1][1] , best_all_morning_customer_id_and_fitness2[0][1][1]  , best_all_afternoon_customer_id_and_fitness2[0][1][1]]))
-        # print(sum([best_all_morning_customer_id_and_fitness1[0][1][0] , best_all_afternoon_customer_id_and_fitness1[0][1][0] , best_all_morning_customer_id_and_fitness2[0][1][0]  , best_all_afternoon_customer_id_and_fitness2[0][1][0]]))
         self.SE_all_cost = sum([best_all_morning_customer_id_and_fitness1[0][1][1] , best_all_afternoon_customer_id_and_fitness1[0][1][1] , best_all_morning_customer_id_and_fitness2[0][1][1]  , best_all_afternoon_customer_id_and_fitness2[0][1][1]])
         self.SE_all_cost += self.all_number_vehicles * 50 + self.number_satellite * 1000
-        # print("第二階段成本：", self.SE_all_cost)
-        self.all_number_vehicles = sum([best_all_morning_customer_id_and_fitness1[0][1][0] , best_all_afternoon_customer_id_and_fitness1[0][1][0] , best_all_morning_customer_id_and_fitness2[0][1][0]  , best_all_afternoon_customer_id_and_fitness2[0][1][0]])
-        # print("第二階段車輛數：",self.all_number_vehicles)
 
     def First_route(self):
         gurobi_Model = FE_gurobi()
         self.FE_all_cost = gurobi_Model.main(self.depot , self.number_satellite , self.centers , [1000,1000] , self.fe_vehicle_capacity)
-        # print("第一階段成本：",self.FE_all_cost)
-        # pass
 
     def Computation_time(self):
-        # print("總共花費時間：" ,time.time() -  self.start_time)
         self.all_time = time.time() -  self.start_time
-
-    def plot_fitness(self):
-        title = "CW_NSGAII with 2EMDCVRP, mute_prob={}__day = {}".format(self.mut_prob , self.day)
-        plt.cla()
-        plt.plot(self.score_history)
-        plt.xlabel("Iterations")
-        plt.ylabel("Cost")
-        plt.title(title)
-        plt.savefig(f'figures/mute_prob{self.mut_prob}__day = {self.day}.png')
-        # plt.show()
 
     def runMain(self):
         self.load_instance()
@@ -1002,54 +895,38 @@ class nsgaAlgo(object):
         self.initial_population()
         self.runGenerations()
         self.result()
-        self.First_route()
+        # self.First_route()
         self.Computation_time()
-        # self.plot_fitness()
 
 if __name__ == "__main__":
-    # someinstance = nsgaAlgo()
-    # someinstance.runMain()
     print("Running file directly, Executing nsga2vrp")
-    start = 0
-    end = 99    
-    C = 0.9
-    M = 0.0
-
-    for d in range(30):
-        crossover_stats = []  # 儲存交配率與平均值 (C, avg)
-        
+    start, end, M , C= 0, 99, 0.0 , 0.9
+    for day in range(30):
+        crossover_stats = []
         for i in range(5):
-            A = []
-            V = []
-            for j in range(10):
-                someinstance = nsgaAlgo()
-                someinstance.start_customer_number = start
-                someinstance.end_customer_number = end
-                someinstance.crossover_probability = C
-                someinstance.mut_prob = M
-                someinstance.runMain()
-                print("總成本：" , someinstance.SE_all_cost , "總車輛數：" , someinstance.all_number_vehicles)
-                cost = someinstance.FE_all_cost + someinstance.SE_all_cost
-                A.append(cost)
-                V.append(someinstance.all_number_vehicles)
+            costs, vehicles = [], []
+            for _ in range(10):
+                model = NSGAAlgorithm()
+                model.start_customer_number = start
+                model.end_customer_number = end
+                model.crossover_probability = C
+                model.mut_prob = M
+                model.day = day + 1
+                model.runMain()
+                total_cost = model.FE_all_cost + model.SE_all_cost
+                costs.append(total_cost)
+                vehicles.append(model.all_number_vehicles)
+                print(f"總成本：{model.SE_all_cost} 總車輛數：{model.all_number_vehicles}")
 
-            arr = np.array(A)
-            avg_cost = np.mean(arr)
-            crossover_stats.append((C, avg_cost))  # 存交配率與平均值
-            print("第", d + 1, "天 第", i + 1, "組")
-            print("交配率：" , C , "突變率：" , M)
-            print("平均值：", avg_cost , "最小值：" , np.min(arr))
-            
-            C = round(C - 0.05 , 2)  # 每組交配率遞減
-        
-        # 找出當天平均成本最小的交配率
+            avg_cost = np.mean(costs)
+            crossover_stats.append((C, avg_cost))
+            print(f"第{day + 1}天 第{i + 1}組")
+            print(f"交配率：{C} 突變率：{M}")
+            print(f"平均值：{avg_cost} 最小值：{np.min(costs)}")
+            C = round(C - 0.05, 2)
+
         best_C, best_avg = min(crossover_stats, key=lambda x: x[1])
-        print("====== 第", d + 1, "天最佳交配率 ======")
-        print("最佳交配率：", best_C, "  對應平均總成本：", best_avg)
+        print(f"====== 第{day + 1}天最佳交配率 ======")
+        print(f"最佳交配率：{best_C}  對應平均總成本：{best_avg}")
         print("===================================")
-
-        # 重設交配率、切換客戶編號範圍
-        C = 0.9
-        start += 100
-        end += 100
-        # 第一梯隊路線
+        C, start, end = 0.9, start + 100, end + 100
