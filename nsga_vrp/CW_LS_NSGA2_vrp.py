@@ -1297,11 +1297,11 @@ if __name__ == "__main__":
         [26, 0.9,  0.1], [27, 0.85, 0.2], [28, 0.9, 0.1], [29, 0.85, 0.5], [30, 0.75, 0.2]
     ]
 
-    start, end = 400 , 499
+    start, end = 2900 , 2999
 
-    with open("result2.txt", "w", encoding="utf-8") as f:
+    with open("result3.txt", "w", encoding="utf-8") as f:
         f.write("Running file directly, Executing nsga2vrp\n")
-        for day in range(5 , 31):
+        for day in range(30 , 31):
             crossover_stats = []
             for s in range(1 , 4):
                 model = NSGAAlgorithm()
