@@ -1,0 +1,2 @@
+Running file directly, Executing nsga2vrp
+第5天 & 衛星數：1 & 總成本：5537.808

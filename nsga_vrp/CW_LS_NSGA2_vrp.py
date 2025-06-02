@@ -466,7 +466,7 @@ class NSGAAlgorithm(object):
         self.num_gen = 1000
         self.pop_size = 20
         self.best_pop = 1
-        self.fe_vehicle_capacity = 1000
+        self.fe_vehicle_capacity = 4000
         self.se_vehicle_capacity = 400
         self.se_vehicle_speed = 50
         self.depot = [["d1" , 120.373731 , 36.185609] , ["d2" , 118.054927 , 36.813487] , ["d3" , 116.897877 , 36.611274]]
@@ -1297,11 +1297,11 @@ if __name__ == "__main__":
         [26, 0.9,  0.1], [27, 0.85, 0.2], [28, 0.9, 0.1], [29, 0.85, 0.5], [30, 0.75, 0.2]
     ]
 
-    start, end = 0, 99
+    start, end = 400 , 499
 
-    with open("result.txt", "w", encoding="utf-8") as f:
+    with open("result2.txt", "w", encoding="utf-8") as f:
         f.write("Running file directly, Executing nsga2vrp\n")
-        for day in range(1 , 31):
+        for day in range(5 , 31):
             crossover_stats = []
             for s in range(1 , 4):
                 model = NSGAAlgorithm()
