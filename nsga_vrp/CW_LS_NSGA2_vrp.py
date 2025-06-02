@@ -1299,7 +1299,7 @@ if __name__ == "__main__":
 
     start, end = 2900 , 2999
 
-    with open("result3.txt", "w", encoding="utf-8") as f:
+    with open("result.txt", "w", encoding="utf-8") as f:
         f.write("Running file directly, Executing nsga2vrp\n")
         for day in range(30 , 31):
             crossover_stats = []
