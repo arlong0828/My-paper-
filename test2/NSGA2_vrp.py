@@ -1260,16 +1260,16 @@ if __name__ == "__main__":
             f.write(f"=== Instance {instance_id}: Customer {start} ~ {end}, Satellite: {S[instance_id - 1]} ===\n")
             print(f"\n=== Instance {instance_id}: Customer {start} ~ {end} ===")
             
-            C = [0.7 , 0.55]  # 初始 crossover probability
+            C = 0.85
             M = 0.1
-            while M <= 1:
+            while C >= 0.4:
                 avg_cost = 0
                 for repeat in range(5):
                     model = NSGAAlgorithm()
                     model.start_customer_number = start
                     model.end_customer_number = end
                     model.number_satellite = S[instance_id - 1]
-                    model.crossover_probability = C[instance_id - 1]
+                    model.crossover_probability = C
                     model.mut_prob = M
                     model.runMain()
                     total = model.SE_all_cost + model.FE_all_cost
@@ -1279,4 +1279,4 @@ if __name__ == "__main__":
                 result_line = f"Crossover Probability: {C:.2f} , 突變率:{M:.2f} → Avg Total Cost: {avg_cost:.2f} , 衛星數量: {S[instance_id - 1]}"
                 print(result_line)
                 f.write(result_line + "\n")
-                M += 0.1
+                C -= round(0.05, 2) 
