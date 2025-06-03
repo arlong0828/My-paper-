@@ -56,7 +56,7 @@ def calculate_distance(latitude1, longitude1, latitude2, longitude2):
 
 def calculate_time(time_morning_vehicles , instace , distance , speed , cost):
     time_morning_vehicles += (distance / speed) * 60
-    cost += (distance ) * 0.05 + 0.1 * max(instace[3] - time_morning_vehicles , 0) + 0.1 * max(time_morning_vehicles - instace[4], 0)
+    cost += (distance ) * 0.05 + 0.2 * max(instace[3] - time_morning_vehicles , 0) + 0.2 * max(time_morning_vehicles - instace[4], 0)
     return time_morning_vehicles , cost
 
 def get_distance( morning_customer , afternoon_customer):
@@ -297,47 +297,62 @@ def exchange(ind1, se_vehicle_capacity, instace):
         update_ind1 += i
     return update_ind1
 
-def opt2(ind1, se_vehicle_capacity , instace):
+def opt2(ind1, se_vehicle_capacity, instance):
     update_ind1 = []
     ind = copy.deepcopy(ind1)
-    route = update_route(ind , se_vehicle_capacity , instace)
-    r = random.randrange(0 , len(route) , 1)
+    route = update_route(ind, se_vehicle_capacity, instance)
+
+    if len(route) == 0:
+        return ind  # 若路徑為空，回傳原始個體
+
+    r = random.randrange(0, len(route), 1)
+
     if len(route[r]) > 1:
-        a , b = sorted(random.sample(range(len(route[r])) , 2))
+        a, b = sorted(random.sample(range(len(route[r])), 2))
         re = route[r][:a] + list(reversed(route[r][a:b + 1]))
         if b < len(route[r]) - 1:
-            re += route[r][b + 1 :]
+            re += route[r][b + 1:]
     else:
         re = route[r]
+
     for i in range(len(route)):
         if i == r:
             update_ind1 += re
         else:
             update_ind1 += route[i]
+
     return update_ind1
 
-def relocate(ind1, se_vehicle_capacity , instace):
+def relocate(ind1, se_vehicle_capacity, instance):
     update_ind1 = []
-    asd = []
     ind = copy.deepcopy(ind1)
-    route = update_route(ind , se_vehicle_capacity , instace)
-    r = random.randrange(0 , len(route) , 1)
+    route = update_route(ind, se_vehicle_capacity, instance)
+
+    # 防呆：route 為空時，直接回傳原始個體
+    if len(route) == 0:
+        # print("⚠️ relocate：route 為空，無法操作，回傳原個體")
+        return ind
+
+    r = random.randrange(0, len(route))
+
+    # 如果該路徑有多於1個節點才進行 relocate
     if len(route[r]) > 1:
-        a , b = random.sample(range(len(route[r])) , 2)
-        for i in range(len(route[r])):
-            if i == b:
-                continue
-            else:
-                asd.append(route[r][i])
-        asd.insert(a , route[r][b])
+        a, b = random.sample(range(len(route[r])), 2)
+        # 建立新路徑：把第 b 個節點移到第 a 個位置
+        temp_route = [route[r][i] for i in range(len(route[r])) if i != b]
+        temp_route.insert(a, route[r][b])
     else:
-        asd = route[r]
+        temp_route = route[r]  # 單節點的路徑不進行更動
+
+    # 組裝新個體
     for i in range(len(route)):
         if i == r:
-            update_ind1 += asd
+            update_ind1 += temp_route
         else:
             update_ind1 += route[i]
+
     return update_ind1
+
 
 def update_route(ind1 , se_vehicle_capacity , instace):
     capacity = 0
@@ -904,7 +919,7 @@ class NSGAAlgorithm(object):
                         self.all_afternoon_customer_id_and_fitness1.append([relocate_ind , fitmess4])
                         del self.all_afternoon_customer_id_and_fitness1[i]
                         break
-
+            # print(self.all_afternoon_customer_id_and_fitness2)
             for i in range(len(self.all_afternoon_customer_id_and_fitness2)):
 
                 fitness1 = satellite_calculate_fitness(self.all_afternoon_customer_id_and_fitness2[i][0] , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[1])
@@ -1255,7 +1270,7 @@ class NSGAAlgorithm(object):
         self.initial_population()
         self.runGenerations()
         self.result()
-        self.First_route()
+        # self.First_route()
         self.Computation_time()
 
 if __name__ == "__main__":
