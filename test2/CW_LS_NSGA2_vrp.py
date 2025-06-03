@@ -463,7 +463,7 @@ class NSGAAlgorithm(object):
         self.json_instance = ""
         self.crossover_probability = 0.85
         self.mut_prob = 0.1
-        self.num_gen = 10
+        self.num_gen = 1000
         self.pop_size = 20
         self.best_pop = 1
         self.fe_vehicle_capacity = 4000
@@ -1227,7 +1227,7 @@ class NSGAAlgorithm(object):
         self.initial_population()
         self.runGenerations()
         self.result()
-        # self.First_route()
+        self.First_route()
         self.Computation_time()
 
 if __name__ == "__main__":
@@ -1238,27 +1238,28 @@ if __name__ == "__main__":
     S = [2, 3]
 
     # 開啟輸出檔案
-    with open("crossover_test_results.txt", "w", encoding="utf-8") as f:
+    with open("mp_test_results.txt", "w", encoding="utf-8") as f:
         for instance_id, (start, end) in enumerate(instances, 1):
             f.write(f"=== Instance {instance_id}: Customer {start} ~ {end}, Satellite: {S[instance_id - 1]} ===\n")
             print(f"\n=== Instance {instance_id}: Customer {start} ~ {end} ===")
             
-            C = 0.85  # 初始 crossover probability
-            while C >= 0.4:
+            C = [0.7 , 0.55]  # 初始 crossover probability
+            M = 0.1
+            while M <= 1:
                 avg_cost = 0
                 for repeat in range(5):
                     model = NSGAAlgorithm()
                     model.start_customer_number = start
                     model.end_customer_number = end
                     model.number_satellite = S[instance_id - 1]
-                    model.crossover_probability = C
-                    model.mut_prob = 0.0
+                    model.crossover_probability = C[instance_id - 1]
+                    model.mut_prob = M
                     model.runMain()
                     total = model.SE_all_cost + model.FE_all_cost
                     avg_cost += total
                 avg_cost /= 5
 
-                result_line = f"Crossover Probability: {C:.2f} → Avg Total Cost: {avg_cost:.2f} , 衛星數量: {S[instance_id - 1]}"
+                result_line = f"Crossover Probability: {C:.2f} , 突變率:{M:.2f} → Avg Total Cost: {avg_cost:.2f} , 衛星數量: {S[instance_id - 1]}"
                 print(result_line)
                 f.write(result_line + "\n")
-                C -= 0.05
+                M += 0.1
