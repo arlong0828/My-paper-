@@ -1238,13 +1238,13 @@ if __name__ == "__main__":
     S = [2, 3]
 
     # 開啟輸出檔案
-    with open("mp_test_results.txt", "w", encoding="utf-8") as f:
+    with open("mp_test_results2.txt", "w", encoding="utf-8") as f:
         for instance_id, (start, end) in enumerate(instances, 1):
             f.write(f"=== Instance {instance_id}: Customer {start} ~ {end}, Satellite: {S[instance_id - 1]} ===\n")
             print(f"\n=== Instance {instance_id}: Customer {start} ~ {end} ===")
-            
+            C_ = 0.4
             C = [0.7 , 0.55]  # 初始 crossover probability
-            M = 0.1
+            M = 0.0
             while M <= 1:
                 avg_cost = 0
                 for repeat in range(5):
@@ -1252,14 +1252,14 @@ if __name__ == "__main__":
                     model.start_customer_number = start
                     model.end_customer_number = end
                     model.number_satellite = S[instance_id - 1]
-                    model.crossover_probability = C[instance_id - 1]
+                    model.crossover_probability = C_
                     model.mut_prob = M
                     model.runMain()
                     total = model.SE_all_cost + model.FE_all_cost
                     avg_cost += total
                 avg_cost /= 5
 
-                result_line = f"Crossover Probability: {C:.2f} , 突變率:{M:.2f} → Avg Total Cost: {avg_cost:.2f} , 衛星數量: {S[instance_id - 1]}"
+                result_line = f"Crossover Probability: {C_} , 突變率:{M:.2f} → Avg Total Cost: {avg_cost:.2f} , 衛星數量: {S[instance_id - 1]}"
                 print(result_line)
                 f.write(result_line + "\n")
                 M += 0.1
