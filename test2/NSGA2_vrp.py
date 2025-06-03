@@ -274,17 +274,27 @@ def mutation(ind1 , mut_prob):
         return mutated
     return ind1
 
-def exchange(ind1, se_vehicle_capacity , instace):
+def exchange(ind1, se_vehicle_capacity, instace):
+
     update_ind1 = []
     ind = copy.deepcopy(ind1)
-    route = update_route(ind , se_vehicle_capacity , instace)
+    route = update_route(ind, se_vehicle_capacity, instace)
 
-    r = random.randrange(0 , len(route) , 1)
-    if len(route[r]) > 1:
-        a , b = random.sample(range(len(route[r])) , 2)
-        route[r][a] , route[r][b] = route[r][b] , route[r][a]
+    # 防止空路徑列表
+    if not route or len(route) == 0:
+        return ind1
+
+    # 隨機選擇非空且長度大於 1 的子路徑
+    valid_routes = [i for i in range(len(route)) if len(route[i]) > 1]
+    if not valid_routes:
+        return ind1
+
+    r = random.choice(valid_routes)  # 安全選擇可用的路徑
+    a, b = random.sample(range(len(route[r])), 2)
+    route[r][a], route[r][b] = route[r][b], route[r][a]
+
     for i in route:
-        update_ind1 += i   
+        update_ind1 += i
     return update_ind1
 
 def opt2(ind1, se_vehicle_capacity , instace):
@@ -476,19 +486,20 @@ def calculate_satellite_demand(instance , customer_group):
 
 class NSGAAlgorithm(object):
 
+
     def __init__(self):
-        self.start_customer_number = 9001
-        self.end_customer_number = 9100
+        self.start_customer_number = 0
+        self.end_customer_number = 99
         self.json_instance = ""
-        self.crossover_probability = 0.75
+        self.crossover_probability = 0.85
         self.mut_prob = 0.1
-        self.num_gen = 1000
+        self.num_gen = 10
         self.pop_size = 20
         self.best_pop = 1
-        self.fe_vehicle_capacity = 20000
-        self.se_vehicle_capacity = 300
+        self.fe_vehicle_capacity = 4000
+        self.se_vehicle_capacity = 400
         self.se_vehicle_speed = 50
-        self.depot = [[120.373731 , 36.185609] , [118.054927 , 36.813487] , [116.897877 , 36.611274]]
+        self.depot = [["d1" , 120.373731 , 36.185609] , ["d2" , 118.054927 , 36.813487] , ["d3" , 116.897877 , 36.611274]]
         self.number_satellite = 2
         self.centers , self.customer_group = "" , ""
         self.all_morning_customer_id_and_fitness1 = []
@@ -496,16 +507,16 @@ class NSGAAlgorithm(object):
         self.all_morning_customer_id_and_fitness2 = []
         self.all_afternoon_customer_id_and_fitness2 = []
         self.all_morning_customer_id_and_fitness3 = []
-        self.all_afternoon_customer_id_and_fitness3 = [] 
+        self.all_afternoon_customer_id_and_fitness3 = []
         self.all_morning_customer_id_and_fitness4 = []
         self.all_afternoon_customer_id_and_fitness4 = []
         self.start_time = time.time()
-        self.score_history = []
         self.day = 0
-        self.all_cost = 0
         self.all_number_vehicles = 0
         self.all_time = 0
-        self.table_data = [["顧客ID", "經度", "緯度", "最早時間" , "最晚時間" , "需求量" , "退貨量"]]
+        self.FE_all_cost = 0
+        self.SE_all_cost = 0
+        self.satellite_demand = []
 
     def load_instance(self):
         wb = openpyxl.load_workbook("./data/real_data.xlsx")
@@ -1255,13 +1266,13 @@ if __name__ == "__main__":
     S = [2, 3]
 
     # 開啟輸出檔案
-    with open("mp_test_results.txt", "w", encoding="utf-8") as f:
+    with open("cp_test2_results.txt", "w", encoding="utf-8") as f:
         for instance_id, (start, end) in enumerate(instances, 1):
             f.write(f"=== Instance {instance_id}: Customer {start} ~ {end}, Satellite: {S[instance_id - 1]} ===\n")
             print(f"\n=== Instance {instance_id}: Customer {start} ~ {end} ===")
             
             C = 0.85
-            M = 0.1
+            M = 0.0
             while C >= 0.4:
                 avg_cost = 0
                 for repeat in range(5):
