@@ -1,1 +1,0 @@
-Running file directly, Executing nsga2vrp
