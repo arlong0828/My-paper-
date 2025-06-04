@@ -508,7 +508,7 @@ class NSGAAlgorithm(object):
         self.json_instance = ""
         self.crossover_probability = 0.85
         self.mut_prob = 0.1
-        self.num_gen = 10
+        self.num_gen = 1000
         self.pop_size = 20
         self.best_pop = 1
         self.fe_vehicle_capacity = 4000
@@ -1270,7 +1270,7 @@ class NSGAAlgorithm(object):
         self.initial_population()
         self.runGenerations()
         self.result()
-        # self.First_route()
+        self.First_route()
         self.Computation_time()
 
 if __name__ == "__main__":
