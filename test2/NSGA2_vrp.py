@@ -1276,33 +1276,32 @@ class NSGAAlgorithm(object):
 if __name__ == "__main__":
     print("Running file directly, Executing nsga2vrp")
 
-    # 定義兩個實例與對應的衛星數
-    instances = [(3000, 3049) , (3500, 3579)]
-    S = [2 , 3]
-
+    S = [2, 3]
+    C = [0.85 , 0.85]
+    M = [0.5 ,0.6]
+    select = 0
+    start , end = 3000 , 3049
     # 開啟輸出檔案
-    with open("mp_test2_results.txt", "w", encoding="utf-8") as f:
-        for instance_id, (start, end) in enumerate(instances, 1):
-            f.write(f"=== Instance {instance_id}: Customer {start} ~ {end}, Satellite: {S[instance_id - 1]} ===\n")
-            print(f"\n=== Instance {instance_id}: Customer {start} ~ {end} ===")
-            
-            C = 0.85
-            M = 0.1
-            while M <= 1:
-                avg_cost = 0
-                for repeat in range(5):
-                    model = NSGAAlgorithm()
-                    model.start_customer_number = start
-                    model.end_customer_number = end
-                    model.number_satellite = S[instance_id - 1]
-                    model.crossover_probability = C
-                    model.mut_prob = M
-                    model.runMain()
-                    total = model.SE_all_cost + model.FE_all_cost
-                    avg_cost += total
-                avg_cost /= 5
-
-                result_line = f"Crossover Probability: {C:.2f} , 突變率:{M:.2f} → Avg Total Cost: {avg_cost:.2f} , 衛星數量: {S[instance_id - 1]}"
-                print(result_line)
-                f.write(result_line + "\n")
-                M += round(0.1, 1) 
+    with open("test_result.txt", "w", encoding="utf-8") as f:
+        for i in range(1,21):
+            if i <= 10:
+                select = 0
+            else:
+                select = 1
+            model = NSGAAlgorithm()
+            model.start_customer_number = start
+            model.end_customer_number = end
+            model.crossover_probability = C[select]
+            model.mut_prob = M[select]
+            model.number_satellite = S[select]  
+            # model.runMain()
+            total = model.SE_all_cost + model.FE_all_cost
+            result_line = f"測試:{i} , 開始:{start} ~ 結束:{end} ,交配率: {C[select]} , 突變率:{M[select]} → Avg Total Cost: {total:.2f} , 衛星數量: {S[select]}"
+            print(result_line)
+            f.write(result_line + "\n")
+            if i < 10:
+                start = end + 1
+                end = start + 49  
+            else:   
+                start = end + 1
+                end = start + 79
