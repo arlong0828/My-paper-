@@ -1277,18 +1277,18 @@ if __name__ == "__main__":
     print("Running file directly, Executing nsga2vrp")
 
     # 定義兩個實例與對應的衛星數
-    instances = [(3000, 3049), (3500, 3579)]
-    S = [2, 3]
+    instances = [(3000, 3049) , (3500, 3579)]
+    S = [2 , 3]
 
     # 開啟輸出檔案
-    with open("cp_test2_results.txt", "w", encoding="utf-8") as f:
+    with open("mp_test2_results.txt", "w", encoding="utf-8") as f:
         for instance_id, (start, end) in enumerate(instances, 1):
             f.write(f"=== Instance {instance_id}: Customer {start} ~ {end}, Satellite: {S[instance_id - 1]} ===\n")
             print(f"\n=== Instance {instance_id}: Customer {start} ~ {end} ===")
             
             C = 0.85
-            M = 0.0
-            while C >= 0.4:
+            M = 0.1
+            while M <= 1:
                 avg_cost = 0
                 for repeat in range(5):
                     model = NSGAAlgorithm()
@@ -1305,4 +1305,4 @@ if __name__ == "__main__":
                 result_line = f"Crossover Probability: {C:.2f} , 突變率:{M:.2f} → Avg Total Cost: {avg_cost:.2f} , 衛星數量: {S[instance_id - 1]}"
                 print(result_line)
                 f.write(result_line + "\n")
-                C -= round(0.05, 2) 
+                M += round(0.1, 1) 

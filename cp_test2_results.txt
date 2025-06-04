@@ -8,6 +8,7 @@ Crossover Probability: 0.60 , 突變率:0.00 → Avg Total Cost: 8137.60 , 衛�
 Crossover Probability: 0.55 , 突變率:0.00 → Avg Total Cost: 8273.55 , 衛星數量: 2
 Crossover Probability: 0.50 , 突變率:0.00 → Avg Total Cost: 8217.53 , 衛星數量: 2
 Crossover Probability: 0.45 , 突變率:0.00 → Avg Total Cost: 8092.56 , 衛星數量: 2
+Crossover Probability: 0.40 , 突變率:0.00 → Avg Total Cost: 8225.35 , 衛星數量: 2
 === Instance 2: Customer 3500 ~ 3579, Satellite: 3 ===
 Crossover Probability: 0.85 , 突變率:0.00 → Avg Total Cost: 10360.53 , 衛星數量: 3
 Crossover Probability: 0.80 , 突變率:0.00 → Avg Total Cost: 10570.15 , 衛星數量: 3
@@ -18,3 +19,4 @@ Crossover Probability: 0.60 , 突變率:0.00 → Avg Total Cost: 11483.38 , 衛�
 Crossover Probability: 0.55 , 突變率:0.00 → Avg Total Cost: 11205.10 , 衛星數量: 3
 Crossover Probability: 0.50 , 突變率:0.00 → Avg Total Cost: 10884.96 , 衛星數量: 3
 Crossover Probability: 0.45 , 突變率:0.00 → Avg Total Cost: 10718.98 , 衛星數量: 3
+Crossover Probability: 0.40 , 突變率:0.00 → Avg Total Cost: 11250.99 , 衛星數量: 3
