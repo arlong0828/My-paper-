@@ -1251,7 +1251,7 @@ if __name__ == "__main__":
             model.crossover_probability = C[select]
             model.mut_prob = M[select]
             model.number_satellite = S[select]  
-            # model.runMain()
+            model.runMain()
             total = model.SE_all_cost + model.FE_all_cost
             result_line = f"測試:{i} , 開始:{start} ~ 結束:{end} ,交配率: {C[select]} , 突變率:{M[select]} → Avg Total Cost: {total:.2f} , 衛星數量: {S[select]}"
             print(result_line)
