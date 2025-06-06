@@ -21,7 +21,7 @@ from haversine_python import haversine
 # 自定義模組
 from FE_gurobipy import FE_gurobi
 # 匯入資料
-random.seed(1)
+# random.seed(1)
 
 # 使用kmeans分組客戶
 def calculate_satellite_coordinates(instance , number_satellite):
@@ -1280,10 +1280,10 @@ if __name__ == "__main__":
     C = [0.85 , 0.85]
     M = [0.5 ,0.6]
     select = 0
-    start , end = 3900 , 3979
+    start , end = 3000 , 3049
     # 開啟輸出檔案
-    with open("test2_result2.txt", "w", encoding="utf-8") as f:
-        for i in range(16,21):
+    with open("test_result.txt", "w", encoding="utf-8") as f:
+        for i in range(1,21):
             if i <= 10:
                 select = 0
             else:
