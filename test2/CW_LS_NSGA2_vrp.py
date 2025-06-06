@@ -1239,7 +1239,7 @@ if __name__ == "__main__":
     select = 0
     start , end = 3000 , 3049
     # 開啟輸出檔案
-    with open("test_result.txt", "w", encoding="utf-8") as f:
+    with open("test_result2.txt", "w", encoding="utf-8") as f:
         for i in range(1,21):
             if i <= 10:
                 select = 0
