@@ -1210,7 +1210,7 @@ class NSGAAlgorithm(object):
 
         
         
-        self.SE_all_cost += self.all_number_vehicles * 50 + self.number_satellite * 1000
+        self.SE_all_cost += self.all_number_vehicles * 50 + self.number_satellite * 500
 
     def First_route(self):
         gurobi_Model = FE_gurobi()
@@ -1299,13 +1299,13 @@ if __name__ == "__main__":
     S = [
         2,3,2,1,1,3,3,2,1,2,3,3,3,1,1,3,3,1,3,2,1,3,3,3,3,2,1,3,3,3
     ]
-    start, end = 2900 , 2999
+    start, end = 1900 , 1999
 
-    with open("result.txt", "w", encoding="utf-8") as f:
+    with open("./nsga_vrp/result2.txt", "w", encoding="utf-8") as f:
         f.write("Running file directly, Executing nsga2vrp\n")
-        for day in range(30 , 31):
+        for day in range(20 , 31):
             crossover_stats = []
-            for s in range(1 , 4):
+            for s in range(1 , 5):
                 model = NSGAAlgorithm()
                 model.start_customer_number = start
                 model.end_customer_number = end
@@ -1315,6 +1315,7 @@ if __name__ == "__main__":
                 model.day = day
                 model.runMain()
                 total_cost = model.FE_all_cost + model.SE_all_cost
+                print(f"第{day}天 & 衛星數：{model.number_satellite} & 總成本：{total_cost}\n")
                 f.write(f"第{day}天 & 衛星數：{model.number_satellite} & 總成本：{total_cost}\n")
                 crossover_stats.append((s, total_cost))
             best_S, best_avg = min(crossover_stats, key=lambda x: x[1])
