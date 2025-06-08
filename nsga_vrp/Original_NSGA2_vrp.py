@@ -20,7 +20,7 @@ from haversine_python import haversine
 
 # 自定義模組
 from FE_gurobipy import FE_gurobi
-
+# 匯入資料
 random.seed(1)
 
 # 使用kmeans分組客戶
@@ -213,14 +213,32 @@ def eval_indvidual_fitness(se_vehicle_speed , morning_customer_id , afternoon_cu
         number_afternoon_vehicles += 1
     return [number_morning_vehicles , round(morning_total_cost, 0)] , [number_afternoon_vehicles , round(afternoon_total_cost , 0)]
 
-def cxOrderedVrp(input_ind1, input_ind2):
 
+# def single_exchange(ind1 , cross_prob):
+#     if random.random() <= cross_prob:
+#         ind2 = copy.deepcopy(ind1)
+#         a , b= random.sample(range(len(ind2)), 2)
+#         ind2[b] , ind2[a] = ind2[a] , ind2[b]
+#         return ind2
+#     return ind1
+
+def cxOrderedVrp(input_ind1, input_ind2):
+    # Modifying this to suit our needs
+    #  If the sequence does not contain 0, this throws error
+    #  So we will modify inputs here itself and then 
+    #       modify the outputs too
+    if len(input_ind1) == 0 or len(input_ind2) == 0:
+        return input_ind1, input_ind2
+    
     ind1 = copy.deepcopy(input_ind1)
     ind2 = copy.deepcopy(input_ind2)
     size = min(len(ind1), len(ind2))
     a, b = random.sample(range(size), 2)
+    # print("size：" , size)
+    # print(a, b)
     if a > b:
         a, b = b, a
+    # print(a , b)
 
     holes1, holes2 = [True] * size, [True] * size
     for i in range(size):
@@ -228,6 +246,7 @@ def cxOrderedVrp(input_ind1, input_ind2):
             holes1[ind2.index(ind2[i])] = False
             holes2[ind1.index(ind1[i])] = False
 
+    # We must keep the original values somewhere before scrambling everything
     temp1, temp2 = ind1, ind2
     k1, k2 = b + 1, b + 1
     for i in range(size):
@@ -238,6 +257,7 @@ def cxOrderedVrp(input_ind1, input_ind2):
         if not holes2[input_ind1.index(temp2[(i + b + 1) % size])]:
             ind2[k2 % size] = temp2[(i + b + 1) % size]
             k2 += 1
+    # print(ind1 , ind2)
     for i in range(a, b + 1):
         ind1[i], ind2[i] = ind2[i], ind1[i]
 
@@ -254,64 +274,85 @@ def mutation(ind1 , mut_prob):
         return mutated
     return ind1
 
-def exchange(ind1, se_vehicle_capacity , instace):
-    update_ind1 = []
-    ind = copy.deepcopy(ind1)
-    route = update_route(ind , se_vehicle_capacity , instace)
-    if len(route) >= 1:
-        r = random.randrange(0 , len(route) , 1)
-        if len(route[r]) > 1:
-            a , b = random.sample(range(len(route[r])) , 2)
-            route[r][a] , route[r][b] = route[r][b] , route[r][a]
-        for i in route:
-            update_ind1 += i   
-        return update_ind1
-    return ind
-def opt2(ind1, se_vehicle_capacity , instace):
-    update_ind1 = []
-    ind = copy.deepcopy(ind1)
-    route = update_route(ind , se_vehicle_capacity , instace)
-    if len(route) >= 1:
-        r = random.randrange(0 , len(route) , 1)
-        if len(route[r]) > 1:
-            a , b = sorted(random.sample(range(len(route[r])) , 2))
-            re = route[r][:a] + list(reversed(route[r][a:b + 1]))
-            if b < len(route[r]) - 1:
-                re += route[r][b + 1 :]
-        else:
-            re = route[r]
-        for i in range(len(route)):
-            if i == r:
-                update_ind1 += re
-            else:
-                update_ind1 += route[i]
-        return update_ind1
-    return ind
+def exchange(ind1, se_vehicle_capacity, instace):
 
-def relocate(ind1, se_vehicle_capacity , instace):
     update_ind1 = []
-    asd = []
     ind = copy.deepcopy(ind1)
-    route = update_route(ind , se_vehicle_capacity , instace)
-    if len(route) >= 1:
-        r = random.randrange(0 , len(route) , 1)
-        if len(route[r]) > 1:
-            a , b = random.sample(range(len(route[r])) , 2)
-            for i in range(len(route[r])):
-                if i == b:
-                    continue
-                else:
-                    asd.append(route[r][i])
-            asd.insert(a , route[r][b])
+    route = update_route(ind, se_vehicle_capacity, instace)
+
+    # 防止空路徑列表
+    if not route or len(route) == 0:
+        return ind1
+
+    # 隨機選擇非空且長度大於 1 的子路徑
+    valid_routes = [i for i in range(len(route)) if len(route[i]) > 1]
+    if not valid_routes:
+        return ind1
+
+    r = random.choice(valid_routes)  # 安全選擇可用的路徑
+    a, b = random.sample(range(len(route[r])), 2)
+    route[r][a], route[r][b] = route[r][b], route[r][a]
+
+    for i in route:
+        update_ind1 += i
+    return update_ind1
+
+def opt2(ind1, se_vehicle_capacity, instance):
+    update_ind1 = []
+    ind = copy.deepcopy(ind1)
+    route = update_route(ind, se_vehicle_capacity, instance)
+
+    if len(route) == 0:
+        return ind  # 若路徑為空，回傳原始個體
+
+    r = random.randrange(0, len(route), 1)
+
+    if len(route[r]) > 1:
+        a, b = sorted(random.sample(range(len(route[r])), 2))
+        re = route[r][:a] + list(reversed(route[r][a:b + 1]))
+        if b < len(route[r]) - 1:
+            re += route[r][b + 1:]
+    else:
+        re = route[r]
+
+    for i in range(len(route)):
+        if i == r:
+            update_ind1 += re
         else:
-            asd = route[r]
-        for i in range(len(route)):
-            if i == r:
-                update_ind1 += asd
-            else:
-                update_ind1 += route[i]
-        return update_ind1
-    return ind
+            update_ind1 += route[i]
+
+    return update_ind1
+
+def relocate(ind1, se_vehicle_capacity, instance):
+    update_ind1 = []
+    ind = copy.deepcopy(ind1)
+    route = update_route(ind, se_vehicle_capacity, instance)
+
+    # 防呆：route 為空時，直接回傳原始個體
+    if len(route) == 0:
+        # print("⚠️ relocate：route 為空，無法操作，回傳原個體")
+        return ind
+
+    r = random.randrange(0, len(route))
+
+    # 如果該路徑有多於1個節點才進行 relocate
+    if len(route[r]) > 1:
+        a, b = random.sample(range(len(route[r])), 2)
+        # 建立新路徑：把第 b 個節點移到第 a 個位置
+        temp_route = [route[r][i] for i in range(len(route[r])) if i != b]
+        temp_route.insert(a, route[r][b])
+    else:
+        temp_route = route[r]  # 單節點的路徑不進行更動
+
+    # 組裝新個體
+    for i in range(len(route)):
+        if i == r:
+            update_ind1 += temp_route
+        else:
+            update_ind1 += route[i]
+
+    return update_ind1
+
 
 def update_route(ind1 , se_vehicle_capacity , instace):
     capacity = 0
@@ -332,6 +373,7 @@ def update_route(ind1 , se_vehicle_capacity , instace):
     return total_route
 
 def satellite_calculate_fitness(ind1 , se_vehicle_speed , se_vehicle_capacity , instace, time_vehicles , satellite):
+    # print(instace)
     num_vehicle = 0
     route = update_route(ind1 , se_vehicle_capacity , instace)
     num_vehicle = len(route)
@@ -344,7 +386,10 @@ def satellite_calculate_fitness(ind1 , se_vehicle_speed , se_vehicle_capacity , 
             if j == 0:
                 for ins in instace:
                     if ins[0] == i[j]:
+                        # print(time_vehicles2 , ins , cost)
+                        # print(satellite[1] , satellite[0] , ins[2] , ins[1] , calculate_distance(satellite[1] , satellite[0] , ins[2] , ins[1]))
                         time_vehicles2 , cost = calculate_time(time_vehicles2 , ins , calculate_distance(satellite[1] , satellite[0] , ins[2] , ins[1]) , se_vehicle_speed , cost)
+                        # print(time_vehicles2 , cost)
             else:
                 for z in range(len(instace)):
                     if instace[z][0] == i[j]:
@@ -454,8 +499,8 @@ def calculate_satellite_demand(instance , customer_group):
                     satellite_demand += instance[i][5] + instance[i][6]
     return satellite_demand
 
-
 class NSGAAlgorithm(object):
+
 
     def __init__(self):
         self.start_customer_number = 0
@@ -469,7 +514,8 @@ class NSGAAlgorithm(object):
         self.fe_vehicle_capacity = 4000
         self.se_vehicle_capacity = 400
         self.se_vehicle_speed = 50
-        self.depot = [["d1" , 120.373731 , 36.185609] , ["d2" , 118.054927 , 36.813487] , ["d3" , 116.897877 , 36.611274]]
+        self.depots_id = [["d1" , 120.373731 , 36.185609] , ["d2" , 118.054927 , 36.813487] , ["d3" , 116.897877 , 36.611274]]
+        self.depot = [[120.373731 , 36.185609] , [ 118.054927 , 36.813487] , [116.897877 , 36.611274]]
         self.number_satellite = 2
         self.centers , self.customer_group = "" , ""
         self.all_morning_customer_id_and_fitness1 = []
@@ -507,7 +553,7 @@ class NSGAAlgorithm(object):
             customer_lat = customer[2]
             min_dist = float("inf")
             assigned_depot = None
-            for depot in self.depot:
+            for depot in self.depots_id:
                 depot_lon = depot[1]
                 depot_lat = depot[2]
                 dist = H.getDistanceBetweenPointsNew(customer_lat , customer_lon, depot_lat , depot_lon )
@@ -515,87 +561,85 @@ class NSGAAlgorithm(object):
                     min_dist = dist
                     assigned_depot = depot[0]  # 倉庫名稱，例如 "d1"
             customer.append(assigned_depot)  # 加入最近倉庫名稱到資料末尾
-        # print(self.json_instance)
-        # self.centers , self.customer_group = calculate_satellite_coordinates(self.json_instance , self.number_satellite)
-    def filter_customers_in_china(self):
-        df = pd.read_excel("./data/customer_data2.xlsx")
-
-        geometry = [Point(xy) for xy in zip(df['經度'], df['緯度'])]
-        gdf = gpd.GeoDataFrame(df, geometry=geometry, crs="EPSG:4326")  # WGS84座標系統
-
-        world = gpd.read_file("./data/ne_110m_admin_0_countries.shp")
-        china = world[world['NAME'] == 'China']
-
-        in_china = gdf[gdf.within(china.geometry.iloc[0])]
-
-        in_china.to_excel("filtered_customer_data_precise.xlsx", index=False)
-    
-
-    def show_customer_on_china_map(self):
-        customer_lons = [i[1] + np.random.uniform(-0.02, 0.02) for i in self.json_instance]
-        customer_lats = [i[2] + np.random.uniform(-0.02, 0.02) for i in self.json_instance]
-
-        depot_lons = [d[0] for d in self.depot]
-        depot_lats = [d[1] for d in self.depot]
-
-        all_lons = customer_lons + depot_lons
-        all_lats = customer_lats + depot_lats
-        fig = plt.figure(figsize=(10, 8))
-        ax = plt.axes(projection=ccrs.PlateCarree())
-        ax.set_extent([110.80054706818404 ,127.5746712695365, 21.25950285013494, 49.64801823827201
-        ], crs=ccrs.PlateCarree())
-        ax.add_feature(cfeature.LAND, facecolor='lightgray')
-        ax.add_feature(cfeature.OCEAN, facecolor='aliceblue')
-        ax.add_feature(cfeature.COASTLINE, linewidth=0.5, edgecolor='gray')
-        ax.add_feature(cfeature.BORDERS, linestyle=':', edgecolor='gray', linewidth=0.5)
-        ax.add_feature(cfeature.LAKES, facecolor='white', edgecolor='lightblue', alpha=0.3)
-        ax.add_feature(cfeature.RIVERS, edgecolor='lightblue', linewidth=0.4)
-
-        ax.scatter(customer_lons, customer_lats, color='black', marker='v', s=20, alpha=0.5,
-           label='Customer', transform=ccrs.PlateCarree())
-        
-        for i in range(len(self.depot)):
-            label = 'Depot' if i == 0 else None
-            ax.scatter([depot_lons[i]], [depot_lats[i]], color='red', marker='+', s=100,
-                    label=label, transform=ccrs.PlateCarree())
-        ax.legend()
-        plt.show()
 
     def initial_solution(self):
-        for i in range(self.number_satellite):
+        for i in range(len(self.depot)):
             group_ = []
             all_satellite_morning_id = []
             all_satellite_afternoon_id = []
-            for j in range(len(self.customer_group)):
-                if int(i) == int(self.customer_group[j]):
+            for j in range(len(self.json_instance)):
+                if self.depots_id[i][0] == self.json_instance[j][8]:
                     group_.append(self.json_instance[j])
             morning_customer , morning_customer_id , afternoon_customer , afternoon_customer_id= distinguish_between_periods(group_)
-            morning_customer.insert(0 , self.centers[i])
-            afternoon_customer.insert(0 , self.centers[i])
-            morning_distances , afternoon_distances = get_distance(morning_customer , afternoon_customer)
-            morning_savings , afternoon_savings = savingsAlgorithms(morning_distances , afternoon_distances , morning_customer_id , afternoon_customer_id)
-            morning_customer_id , afternoon_customer_id = getRoute(self.json_instance , morning_savings , afternoon_savings , morning_customer_id , afternoon_customer_id , self.se_vehicle_capacity)
-            morning_customer_fitness , afternoon_customer_fitness = eval_indvidual_fitness(self.se_vehicle_speed , morning_customer_id , afternoon_customer_id, instace = self.json_instance , SatelliteCoordinates = self.centers[i] )
+
             for z in morning_customer_id:
                 all_satellite_morning_id += z
-            if i == 0:
-                self.all_morning_customer_id_and_fitness1.append([all_satellite_morning_id , morning_customer_fitness])
-            elif i == 1:
-                self.all_morning_customer_id_and_fitness2.append([all_satellite_morning_id , morning_customer_fitness])
-            elif i == 2:
-                self.all_morning_customer_id_and_fitness3.append([all_satellite_morning_id , morning_customer_fitness])
-            elif i == 3:
-                self.all_morning_customer_id_and_fitness4.append([all_satellite_morning_id , morning_customer_fitness])
             for z in afternoon_customer_id:
                 all_satellite_afternoon_id += z
             if i == 0:
-                self.all_afternoon_customer_id_and_fitness1.append([all_satellite_afternoon_id , afternoon_customer_fitness])
+                # for _ in range(self.pop_size):
+                if len(all_satellite_morning_id) >= 4:
+                    while(len(self.all_morning_customer_id_and_fitness1) < self.pop_size):
+                        # print(all_satellite_morning_id)
+                        new = random.sample(all_satellite_morning_id, k=len(all_satellite_morning_id))
+                        # print(new)
+                        if find_smae(self.all_morning_customer_id_and_fitness1 , new):
+                            fitness = satellite_calculate_fitness(new , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[i])
+                            self.all_morning_customer_id_and_fitness1.append([new , fitness])
+                elif len(all_satellite_morning_id) < 4:
+                    fitness = satellite_calculate_fitness(all_satellite_morning_id , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[i])
+                    self.all_morning_customer_id_and_fitness1.append([all_satellite_morning_id , fitness])
+                if len(all_satellite_afternoon_id) >= 4:
+                    while(len(self.all_afternoon_customer_id_and_fitness1) < self.pop_size):
+                        new2 = random.sample(all_satellite_afternoon_id, k=len(all_satellite_afternoon_id))
+                        if find_smae(self.all_afternoon_customer_id_and_fitness1 , new2):
+                            fitness2 = satellite_calculate_fitness(new2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[i])
+                            self.all_afternoon_customer_id_and_fitness1.append([new2 , fitness2])
+                elif len(all_satellite_afternoon_id) < 4:
+                    fitness2 = satellite_calculate_fitness(all_satellite_afternoon_id , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[i])
+                    self.all_afternoon_customer_id_and_fitness1.append([all_satellite_afternoon_id , fitness2])
             elif i == 1:
-                self.all_afternoon_customer_id_and_fitness2.append([all_satellite_afternoon_id , afternoon_customer_fitness])
+                if len(all_satellite_morning_id) >= 4:
+                    while(len(self.all_morning_customer_id_and_fitness2) < self.pop_size):
+                        # print(all_satellite_morning_id)
+                        new = random.sample(all_satellite_morning_id, k=len(all_satellite_morning_id))
+                        if find_smae(self.all_morning_customer_id_and_fitness2 , new):
+                            fitness = satellite_calculate_fitness(new , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[i])
+                            self.all_morning_customer_id_and_fitness2.append([new , fitness])
+                elif len(all_satellite_morning_id) < 4:
+                    fitness = satellite_calculate_fitness(all_satellite_morning_id , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[i])
+                    self.all_morning_customer_id_and_fitness2.append([all_satellite_morning_id , fitness])
+                if len(all_satellite_afternoon_id) >= 4:
+                    while(len(self.all_afternoon_customer_id_and_fitness2) < self.pop_size):
+                        new2 = random.sample(all_satellite_afternoon_id, k=len(all_satellite_afternoon_id))
+                        if find_smae(self.all_afternoon_customer_id_and_fitness2 , new2):
+                            fitness2 = satellite_calculate_fitness(new2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[i])
+                            self.all_afternoon_customer_id_and_fitness2.append([new2 , fitness2])
+                elif len(all_satellite_afternoon_id) < 4:
+                    fitness2 = satellite_calculate_fitness(all_satellite_afternoon_id , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[i])
+                    self.all_afternoon_customer_id_and_fitness2.append([all_satellite_afternoon_id , fitness2])
             elif i == 2:
-                self.all_afternoon_customer_id_and_fitness3.append([all_satellite_afternoon_id , afternoon_customer_fitness])
-            elif i == 3:
-                self.all_afternoon_customer_id_and_fitness4.append([all_satellite_afternoon_id , afternoon_customer_fitness])
+                if len(all_satellite_morning_id) >= 4:
+                    while(len(self.all_morning_customer_id_and_fitness3) < self.pop_size):
+                        # print(all_satellite_morning_id)
+                        new = random.sample(all_satellite_morning_id, k=len(all_satellite_morning_id))
+                        if find_smae(self.all_morning_customer_id_and_fitness3 , new):
+                            fitness = satellite_calculate_fitness(new , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[i])
+                            self.all_morning_customer_id_and_fitness3.append([new , fitness])
+                elif len(all_satellite_morning_id) < 4: 
+                    fitness = satellite_calculate_fitness(all_satellite_morning_id , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[i])
+                    self.all_morning_customer_id_and_fitness3.append([all_satellite_morning_id , fitness])
+                if len(all_satellite_afternoon_id) >= 4:
+                    while(len(self.all_afternoon_customer_id_and_fitness3) < self.pop_size):
+                        new2 = random.sample(all_satellite_afternoon_id, k=len(all_satellite_afternoon_id))
+                        if find_smae(self.all_afternoon_customer_id_and_fitness3 , new2):
+                            fitness2 = satellite_calculate_fitness(new2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[i])
+                            self.all_afternoon_customer_id_and_fitness3.append([new2 , fitness2])
+                elif len(all_satellite_afternoon_id) < 4:
+                    fitness2 = satellite_calculate_fitness(all_satellite_afternoon_id , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[i])
+                    self.all_afternoon_customer_id_and_fitness3.append([all_satellite_afternoon_id , fitness2])
+
+
 
     def initial_population(self):
         if len(self.all_morning_customer_id_and_fitness1[0][0]) > 5:
@@ -604,17 +648,17 @@ class NSGAAlgorithm(object):
 
                     exchange_ind = exchange(self.all_morning_customer_id_and_fitness1[i][0] , self.se_vehicle_capacity , self.json_instance)
                     if find_smae(self.all_morning_customer_id_and_fitness1 , exchange_ind):
-                        fitmess2 = satellite_calculate_fitness(exchange_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[0])
+                        fitmess2 = satellite_calculate_fitness(exchange_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[0])
                         self.all_morning_customer_id_and_fitness1.append([exchange_ind , fitmess2])
 
                     opt2_ind = opt2(self.all_morning_customer_id_and_fitness1[i][0] , self.se_vehicle_capacity , self.json_instance)
                     if find_smae(self.all_morning_customer_id_and_fitness1 , opt2_ind):
-                        fitmess2 = satellite_calculate_fitness(opt2_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[0])
+                        fitmess2 = satellite_calculate_fitness(opt2_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[0])
                         self.all_morning_customer_id_and_fitness1.append([opt2_ind , fitmess2])
     
                     relocate_ind = relocate(self.all_morning_customer_id_and_fitness1[i][0] , self.se_vehicle_capacity , self.json_instance)
                     if find_smae(self.all_morning_customer_id_and_fitness1 , relocate_ind):
-                        fitmess2 = satellite_calculate_fitness(relocate_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[0])
+                        fitmess2 = satellite_calculate_fitness(relocate_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[0])
                         self.all_morning_customer_id_and_fitness1.append([relocate_ind , fitmess2])
 
         if self.all_morning_customer_id_and_fitness2:
@@ -624,17 +668,17 @@ class NSGAAlgorithm(object):
 
                         exchange_ind = exchange(self.all_morning_customer_id_and_fitness2[i][0] , self.se_vehicle_capacity , self.json_instance)
                         if find_smae(self.all_morning_customer_id_and_fitness2 , exchange_ind):
-                            fitmess2 = satellite_calculate_fitness(exchange_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[1])
+                            fitmess2 = satellite_calculate_fitness(exchange_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[1])
                             self.all_morning_customer_id_and_fitness2.append([exchange_ind , fitmess2])
 
                         opt2_ind = opt2(self.all_morning_customer_id_and_fitness2[i][0] , self.se_vehicle_capacity , self.json_instance)
                         if find_smae(self.all_morning_customer_id_and_fitness2 , opt2_ind):
-                            fitmess2 = satellite_calculate_fitness(opt2_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[1])
+                            fitmess2 = satellite_calculate_fitness(opt2_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[1])
                             self.all_morning_customer_id_and_fitness2.append([opt2_ind , fitmess2])
         
                         relocate_ind = relocate(self.all_morning_customer_id_and_fitness2[i][0] , self.se_vehicle_capacity , self.json_instance)
                         if find_smae(self.all_morning_customer_id_and_fitness2 , relocate_ind):
-                            fitmess2 = satellite_calculate_fitness(relocate_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[1])
+                            fitmess2 = satellite_calculate_fitness(relocate_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[1])
                             self.all_morning_customer_id_and_fitness2.append([relocate_ind , fitmess2])
         if self.all_morning_customer_id_and_fitness3:
             if len(self.all_morning_customer_id_and_fitness3[0][0]) > 5:
@@ -643,37 +687,19 @@ class NSGAAlgorithm(object):
 
                         exchange_ind = exchange(self.all_morning_customer_id_and_fitness3[i][0] , self.se_vehicle_capacity , self.json_instance)
                         if find_smae(self.all_morning_customer_id_and_fitness3 , exchange_ind):
-                            fitmess2 = satellite_calculate_fitness(exchange_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[2])
+                            fitmess2 = satellite_calculate_fitness(exchange_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[2])
                             self.all_morning_customer_id_and_fitness3.append([exchange_ind , fitmess2])
 
                         opt2_ind = opt2(self.all_morning_customer_id_and_fitness3[i][0] , self.se_vehicle_capacity , self.json_instance)
                         if find_smae(self.all_morning_customer_id_and_fitness3 , opt2_ind):
-                            fitmess2 = satellite_calculate_fitness(opt2_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[2])
+                            fitmess2 = satellite_calculate_fitness(opt2_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[2])
                             self.all_morning_customer_id_and_fitness3.append([opt2_ind , fitmess2])
         
                         relocate_ind = relocate(self.all_morning_customer_id_and_fitness3[i][0] , self.se_vehicle_capacity , self.json_instance)
                         if find_smae(self.all_morning_customer_id_and_fitness3 , relocate_ind):
-                            fitmess2 = satellite_calculate_fitness(relocate_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[2])
+                            fitmess2 = satellite_calculate_fitness(relocate_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[2])
                             self.all_morning_customer_id_and_fitness3.append([relocate_ind , fitmess2])
-        if self.all_morning_customer_id_and_fitness4:
-            if len(self.all_morning_customer_id_and_fitness4[0][0]) > 5:
-                while(len(self.all_morning_customer_id_and_fitness4) < 20):
-                    for i in range(len(self.all_morning_customer_id_and_fitness4)):
-
-                        exchange_ind = exchange(self.all_morning_customer_id_and_fitness4[i][0] , self.se_vehicle_capacity , self.json_instance)
-                        if find_smae(self.all_morning_customer_id_and_fitness4 , exchange_ind):
-                            fitmess2 = satellite_calculate_fitness(exchange_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[3])
-                            self.all_morning_customer_id_and_fitness4.append([exchange_ind , fitmess2])
-
-                        opt2_ind = opt2(self.all_morning_customer_id_and_fitness4[i][0] , self.se_vehicle_capacity , self.json_instance)
-                        if find_smae(self.all_morning_customer_id_and_fitness4 , opt2_ind):
-                            fitmess2 = satellite_calculate_fitness(opt2_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[3])
-                            self.all_morning_customer_id_and_fitness4.append([opt2_ind , fitmess2])
-        
-                        relocate_ind = relocate(self.all_morning_customer_id_and_fitness4[i][0] , self.se_vehicle_capacity , self.json_instance)
-                        if find_smae(self.all_morning_customer_id_and_fitness4 , relocate_ind):
-                            fitmess2 = satellite_calculate_fitness(relocate_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[3])
-                            self.all_morning_customer_id_and_fitness4.append([relocate_ind , fitmess2])
+     
 
         if len(self.all_afternoon_customer_id_and_fitness1[0][0]) > 5:
             while(len(self.all_afternoon_customer_id_and_fitness1) < 20):
@@ -681,17 +707,17 @@ class NSGAAlgorithm(object):
 
                     exchange_ind = exchange(self.all_afternoon_customer_id_and_fitness1[i][0] , self.se_vehicle_capacity , self.json_instance)
                     if find_smae(self.all_afternoon_customer_id_and_fitness1 , exchange_ind):
-                        fitmess2 = satellite_calculate_fitness(exchange_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[0])
+                        fitmess2 = satellite_calculate_fitness(exchange_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[0])
                         self.all_afternoon_customer_id_and_fitness1.append([exchange_ind , fitmess2])
 
                     opt2_ind = opt2(self.all_afternoon_customer_id_and_fitness1[i][0] , self.se_vehicle_capacity , self.json_instance)
                     if find_smae(self.all_afternoon_customer_id_and_fitness1 , opt2_ind):
-                        fitmess2 = satellite_calculate_fitness(opt2_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[0])
+                        fitmess2 = satellite_calculate_fitness(opt2_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[0])
                         self.all_afternoon_customer_id_and_fitness1.append([opt2_ind , fitmess2])
     
                     relocate_ind = relocate(self.all_afternoon_customer_id_and_fitness1[i][0] , self.se_vehicle_capacity , self.json_instance)
                     if find_smae(self.all_afternoon_customer_id_and_fitness1 , relocate_ind):
-                        fitmess2 = satellite_calculate_fitness(relocate_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[0])
+                        fitmess2 = satellite_calculate_fitness(relocate_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[0])
                         self.all_afternoon_customer_id_and_fitness1.append([relocate_ind , fitmess2])
         if self.all_afternoon_customer_id_and_fitness2:
             if len(self.all_afternoon_customer_id_and_fitness2[0][0]) > 5:
@@ -700,17 +726,17 @@ class NSGAAlgorithm(object):
 
                         exchange_ind = exchange(self.all_afternoon_customer_id_and_fitness2[i][0] , self.se_vehicle_capacity , self.json_instance)
                         if find_smae(self.all_afternoon_customer_id_and_fitness2 , exchange_ind):
-                            fitmess2 = satellite_calculate_fitness(exchange_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[1])
+                            fitmess2 = satellite_calculate_fitness(exchange_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[1])
                             self.all_afternoon_customer_id_and_fitness2.append([exchange_ind , fitmess2])
 
                         opt2_ind = opt2(self.all_afternoon_customer_id_and_fitness2[i][0] , self.se_vehicle_capacity , self.json_instance)
                         if find_smae(self.all_afternoon_customer_id_and_fitness2 , opt2_ind):
-                            fitmess2 = satellite_calculate_fitness(opt2_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[1])
+                            fitmess2 = satellite_calculate_fitness(opt2_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[1])
                             self.all_afternoon_customer_id_and_fitness2.append([opt2_ind , fitmess2])
         
                         relocate_ind = relocate(self.all_afternoon_customer_id_and_fitness2[i][0] , self.se_vehicle_capacity , self.json_instance)
                         if find_smae(self.all_afternoon_customer_id_and_fitness2 , relocate_ind):
-                            fitmess2 = satellite_calculate_fitness(relocate_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[1])
+                            fitmess2 = satellite_calculate_fitness(relocate_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[1])
                             self.all_afternoon_customer_id_and_fitness2.append([relocate_ind , fitmess2])
         if self.all_afternoon_customer_id_and_fitness3:
             if len(self.all_afternoon_customer_id_and_fitness3[0][0]) > 5:
@@ -719,37 +745,18 @@ class NSGAAlgorithm(object):
 
                         exchange_ind = exchange(self.all_afternoon_customer_id_and_fitness3[i][0] , self.se_vehicle_capacity , self.json_instance)
                         if find_smae(self.all_afternoon_customer_id_and_fitness3 , exchange_ind):
-                            fitmess2 = satellite_calculate_fitness(exchange_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[2])
+                            fitmess2 = satellite_calculate_fitness(exchange_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[2])
                             self.all_afternoon_customer_id_and_fitness3.append([exchange_ind , fitmess2])
 
                         opt2_ind = opt2(self.all_afternoon_customer_id_and_fitness3[i][0] , self.se_vehicle_capacity , self.json_instance)
                         if find_smae(self.all_afternoon_customer_id_and_fitness3 , opt2_ind):
-                            fitmess2 = satellite_calculate_fitness(opt2_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[2])
+                            fitmess2 = satellite_calculate_fitness(opt2_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[2])
                             self.all_afternoon_customer_id_and_fitness3.append([opt2_ind , fitmess2])
         
                         relocate_ind = relocate(self.all_afternoon_customer_id_and_fitness3[i][0] , self.se_vehicle_capacity , self.json_instance)
                         if find_smae(self.all_afternoon_customer_id_and_fitness3 , relocate_ind):
-                            fitmess2 = satellite_calculate_fitness(relocate_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[2])
+                            fitmess2 = satellite_calculate_fitness(relocate_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[2])
                             self.all_afternoon_customer_id_and_fitness3.append([relocate_ind , fitmess2])
-        if self.all_afternoon_customer_id_and_fitness4:
-            if len(self.all_afternoon_customer_id_and_fitness4[0][0]) > 5:
-                while(len(self.all_afternoon_customer_id_and_fitness4) < 20):
-                    for i in range(len(self.all_afternoon_customer_id_and_fitness4)):
-
-                        exchange_ind = exchange(self.all_afternoon_customer_id_and_fitness4[i][0] , self.se_vehicle_capacity , self.json_instance)
-                        if find_smae(self.all_afternoon_customer_id_and_fitness4 , exchange_ind):
-                            fitmess2 = satellite_calculate_fitness(exchange_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[3])
-                            self.all_afternoon_customer_id_and_fitness4.append([exchange_ind , fitmess2])
-
-                        opt2_ind = opt2(self.all_afternoon_customer_id_and_fitness4[i][0] , self.se_vehicle_capacity , self.json_instance)
-                        if find_smae(self.all_afternoon_customer_id_and_fitness4 , opt2_ind):
-                            fitmess2 = satellite_calculate_fitness(opt2_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[3])
-                            self.all_afternoon_customer_id_and_fitness4.append([opt2_ind , fitmess2])
-        
-                        relocate_ind = relocate(self.all_afternoon_customer_id_and_fitness4[i][0] , self.se_vehicle_capacity , self.json_instance)
-                        if find_smae(self.all_afternoon_customer_id_and_fitness4 , relocate_ind):
-                            fitmess2 = satellite_calculate_fitness(relocate_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[3])
-                            self.all_afternoon_customer_id_and_fitness4.append([relocate_ind , fitmess2])
 
     def runGenerations(self):
         for gen in range(self.num_gen):
@@ -757,11 +764,11 @@ class NSGAAlgorithm(object):
             # 上午
             # local search 
             for i in range(len(self.all_morning_customer_id_and_fitness1)):
-                fitness1 = satellite_calculate_fitness(self.all_morning_customer_id_and_fitness1[i][0] , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[0])
+                fitness1 = satellite_calculate_fitness(self.all_morning_customer_id_and_fitness1[i][0] , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[0])
                 
                 exchange_ind = exchange(self.all_morning_customer_id_and_fitness1[i][0] , self.se_vehicle_capacity , self.json_instance)
                 if find_smae(self.all_morning_customer_id_and_fitness1 , exchange_ind):
-                    fitmess2 = satellite_calculate_fitness(exchange_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[0])
+                    fitmess2 = satellite_calculate_fitness(exchange_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[0])
                     if fitness1[1] > fitmess2[1]:
                         self.all_morning_customer_id_and_fitness1.append([exchange_ind , fitmess2])
                         del self.all_morning_customer_id_and_fitness1[i]
@@ -769,7 +776,7 @@ class NSGAAlgorithm(object):
 
                 opt2_ind = opt2(self.all_morning_customer_id_and_fitness1[i][0] , self.se_vehicle_capacity , self.json_instance)
                 if find_smae(self.all_morning_customer_id_and_fitness1 , opt2_ind):
-                    fitmess3 = satellite_calculate_fitness(opt2_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[0])
+                    fitmess3 = satellite_calculate_fitness(opt2_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[0])
                     if fitness1[1] > fitmess3[1]:
                         self.all_morning_customer_id_and_fitness1.append([opt2_ind , fitmess3])
                         del self.all_morning_customer_id_and_fitness1[i]
@@ -777,18 +784,18 @@ class NSGAAlgorithm(object):
 
                 relocate_ind = relocate(self.all_morning_customer_id_and_fitness1[i][0] , self.se_vehicle_capacity , self.json_instance)
                 if find_smae(self.all_morning_customer_id_and_fitness1 , relocate_ind):
-                    fitmess4 = satellite_calculate_fitness(relocate_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[0])
+                    fitmess4 = satellite_calculate_fitness(relocate_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[0])
                     if fitness1[1] > fitmess4[1]:
                         self.all_morning_customer_id_and_fitness1.append([relocate_ind , fitmess4])
                         del self.all_morning_customer_id_and_fitness1[i]
                         break
 
             for i in range(len(self.all_morning_customer_id_and_fitness2)):
-                fitness1 = satellite_calculate_fitness(self.all_morning_customer_id_and_fitness2[i][0] , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[1])
+                fitness1 = satellite_calculate_fitness(self.all_morning_customer_id_and_fitness2[i][0] , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[1])
                 
                 exchange_ind = exchange(self.all_morning_customer_id_and_fitness2[i][0] , self.se_vehicle_capacity , self.json_instance)
                 if find_smae(self.all_morning_customer_id_and_fitness2 , exchange_ind):
-                    fitmess2 = satellite_calculate_fitness(exchange_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[1])
+                    fitmess2 = satellite_calculate_fitness(exchange_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[1])
                     if fitness1[1] > fitmess2[1]:
                         self.all_morning_customer_id_and_fitness2.append([exchange_ind , fitmess2])
                         del self.all_morning_customer_id_and_fitness2[i]
@@ -797,7 +804,7 @@ class NSGAAlgorithm(object):
                 opt2_ind = opt2(self.all_morning_customer_id_and_fitness2[i][0] , self.se_vehicle_capacity , self.json_instance)
                 if find_smae(self.all_morning_customer_id_and_fitness2 , opt2_ind):
 
-                    fitmess3 = satellite_calculate_fitness(opt2_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[1])
+                    fitmess3 = satellite_calculate_fitness(opt2_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[1])
                     if fitness1[1] > fitmess3[1]:
                         self.all_morning_customer_id_and_fitness2.append([opt2_ind , fitmess3])
                         del self.all_morning_customer_id_and_fitness2[i]
@@ -806,18 +813,18 @@ class NSGAAlgorithm(object):
                 relocate_ind = relocate(self.all_morning_customer_id_and_fitness2[i][0] , self.se_vehicle_capacity , self.json_instance)
                 if find_smae(self.all_morning_customer_id_and_fitness2 , relocate_ind):
 
-                    fitmess4 = satellite_calculate_fitness(relocate_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[1])
+                    fitmess4 = satellite_calculate_fitness(relocate_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[1])
                     if fitness1[1] > fitmess4[1]:
                         self.all_morning_customer_id_and_fitness2.append([relocate_ind , fitmess4])
                         del self.all_morning_customer_id_and_fitness2[i]
                         break
 
             for i in range(len(self.all_morning_customer_id_and_fitness3)):
-                fitness1 = satellite_calculate_fitness(self.all_morning_customer_id_and_fitness3[i][0] , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[2])
+                fitness1 = satellite_calculate_fitness(self.all_morning_customer_id_and_fitness3[i][0] , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[2])
                 
                 exchange_ind = exchange(self.all_morning_customer_id_and_fitness3[i][0] , self.se_vehicle_capacity , self.json_instance)
                 if find_smae(self.all_morning_customer_id_and_fitness3 , exchange_ind):
-                    fitmess2 = satellite_calculate_fitness(exchange_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[2])
+                    fitmess2 = satellite_calculate_fitness(exchange_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[2])
                     if fitness1[1] > fitmess2[1]:
                         self.all_morning_customer_id_and_fitness3.append([exchange_ind , fitmess2])
                         del self.all_morning_customer_id_and_fitness3[i]
@@ -825,7 +832,7 @@ class NSGAAlgorithm(object):
                 
                 opt2_ind = opt2(self.all_morning_customer_id_and_fitness3[i][0] , self.se_vehicle_capacity , self.json_instance)
                 if find_smae(self.all_morning_customer_id_and_fitness3 , opt2_ind):
-                    fitmess3 = satellite_calculate_fitness(opt2_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[2])
+                    fitmess3 = satellite_calculate_fitness(opt2_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[2])
                     if fitness1[1] > fitmess3[1]:
                         self.all_morning_customer_id_and_fitness3.append([opt2_ind , fitmess3])
                         del self.all_morning_customer_id_and_fitness3[i]
@@ -833,42 +840,20 @@ class NSGAAlgorithm(object):
 
                 relocate_ind = relocate(self.all_morning_customer_id_and_fitness3[i][0] , self.se_vehicle_capacity , self.json_instance)
                 if find_smae(self.all_morning_customer_id_and_fitness3 , relocate_ind):
-                    fitmess4 = satellite_calculate_fitness(relocate_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[2])
+                    fitmess4 = satellite_calculate_fitness(relocate_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[2])
                     if fitness1[1] > fitmess4[1]:
                         self.all_morning_customer_id_and_fitness3.append([relocate_ind , fitmess4])
                         del self.all_morning_customer_id_and_fitness3[i]
                         break
-            for i in range(len(self.all_morning_customer_id_and_fitness4)):
-                fitmess1 = satellite_calculate_fitness(self.all_morning_customer_id_and_fitness4[i][0] , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[3])
-                exchange_ind = exchange(self.all_morning_customer_id_and_fitness4[i][0] , self.se_vehicle_capacity , self.json_instance)
-                if find_smae(self.all_morning_customer_id_and_fitness4 , exchange_ind):
-                    fitmess2 = satellite_calculate_fitness(exchange_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[3])
-                    if fitmess1[1] > fitmess2[1]:
-                        self.all_morning_customer_id_and_fitness4.append([exchange_ind , fitmess2])
-                        del self.all_morning_customer_id_and_fitness4[i]
-                        break
-                opt2_ind = opt2(self.all_morning_customer_id_and_fitness4[i][0] , self.se_vehicle_capacity , self.json_instance)
-                if find_smae(self.all_morning_customer_id_and_fitness4 , opt2_ind):
-                    fitmess3 = satellite_calculate_fitness(opt2_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[3])
-                    if fitmess1[1] > fitmess3[1]:
-                        self.all_morning_customer_id_and_fitness4.append([opt2_ind , fitmess3])
-                        del self.all_morning_customer_id_and_fitness4[i]
-                        break
-                relocate_ind = relocate(self.all_morning_customer_id_and_fitness4[i][0] , self.se_vehicle_capacity , self.json_instance)
-                if find_smae(self.all_morning_customer_id_and_fitness4 , relocate_ind):
-                    fitmess4 = satellite_calculate_fitness(relocate_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[3])
-                    if fitmess1[1] > fitmess4[1]:
-                        self.all_morning_customer_id_and_fitness4.append([relocate_ind , fitmess4])
-                        del self.all_morning_customer_id_and_fitness4[i]
-                        break
+          
             # 下午
             # local search
             for i in range(len(self.all_afternoon_customer_id_and_fitness1)):
-                fitness1 = satellite_calculate_fitness(self.all_afternoon_customer_id_and_fitness1[i][0] , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[0])
+                fitness1 = satellite_calculate_fitness(self.all_afternoon_customer_id_and_fitness1[i][0] , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[0])
             
                 exchange_ind = exchange(self.all_afternoon_customer_id_and_fitness1[i][0] , self.se_vehicle_capacity , self.json_instance)
                 if find_smae(self.all_afternoon_customer_id_and_fitness1 , exchange_ind):
-                    fitmess2 = satellite_calculate_fitness(exchange_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[0])
+                    fitmess2 = satellite_calculate_fitness(exchange_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[0])
                     if fitness1[1] > fitmess2[1]:
                         self.all_afternoon_customer_id_and_fitness1.append([exchange_ind , fitmess2])
                         del self.all_afternoon_customer_id_and_fitness1[i]
@@ -876,7 +861,7 @@ class NSGAAlgorithm(object):
                 
                 opt2_ind = opt2(self.all_afternoon_customer_id_and_fitness1[i][0] , self.se_vehicle_capacity , self.json_instance)
                 if find_smae(self.all_afternoon_customer_id_and_fitness1 , opt2_ind):
-                    fitmess3 = satellite_calculate_fitness(opt2_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[0])
+                    fitmess3 = satellite_calculate_fitness(opt2_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[0])
                     if fitness1[1] > fitmess3[1]:
                         self.all_afternoon_customer_id_and_fitness1.append([opt2_ind , fitmess3])
                         del self.all_afternoon_customer_id_and_fitness1[i]
@@ -884,7 +869,7 @@ class NSGAAlgorithm(object):
                 
                 relocate_ind = relocate(self.all_afternoon_customer_id_and_fitness1[i][0] , self.se_vehicle_capacity , self.json_instance)
                 if find_smae(self.all_afternoon_customer_id_and_fitness1 , relocate_ind):
-                    fitmess4 = satellite_calculate_fitness(relocate_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[0])
+                    fitmess4 = satellite_calculate_fitness(relocate_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[0])
                     if fitness1[1] > fitmess4[1]:
                         self.all_afternoon_customer_id_and_fitness1.append([relocate_ind , fitmess4])
                         del self.all_afternoon_customer_id_and_fitness1[i]
@@ -892,35 +877,35 @@ class NSGAAlgorithm(object):
 
             for i in range(len(self.all_afternoon_customer_id_and_fitness2)):
 
-                fitness1 = satellite_calculate_fitness(self.all_afternoon_customer_id_and_fitness2[i][0] , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[1])
+                fitness1 = satellite_calculate_fitness(self.all_afternoon_customer_id_and_fitness2[i][0] , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[1])
                 exchange_ind = exchange(self.all_afternoon_customer_id_and_fitness2[i][0] , self.se_vehicle_capacity , self.json_instance)
                 if find_smae(self.all_afternoon_customer_id_and_fitness2 , exchange_ind):
-                    fitmess2 = satellite_calculate_fitness(exchange_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[1])
+                    fitmess2 = satellite_calculate_fitness(exchange_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[1])
                     if fitness1[1] > fitmess2[1]:
                         self.all_afternoon_customer_id_and_fitness2.append([exchange_ind , fitmess2])
                         del self.all_afternoon_customer_id_and_fitness2[i]
                         break
                 opt2_ind = opt2(self.all_afternoon_customer_id_and_fitness2[i][0] , self.se_vehicle_capacity , self.json_instance)
                 if find_smae(self.all_afternoon_customer_id_and_fitness2 , opt2_ind):
-                    fitmess3 = satellite_calculate_fitness(opt2_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[1])
+                    fitmess3 = satellite_calculate_fitness(opt2_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[1])
                     if fitness1[1] > fitmess3[1]:
                         self.all_afternoon_customer_id_and_fitness2.append([opt2_ind , fitmess3])
                         del self.all_afternoon_customer_id_and_fitness2[i]
                         break
                 relocate_ind = relocate(self.all_afternoon_customer_id_and_fitness2[i][0] , self.se_vehicle_capacity , self.json_instance)
                 if find_smae(self.all_afternoon_customer_id_and_fitness2 , relocate_ind):
-                    fitmess4 = satellite_calculate_fitness(relocate_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[1])
+                    fitmess4 = satellite_calculate_fitness(relocate_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[1])
                     if fitness1[1] > fitmess4[1]:
                         self.all_afternoon_customer_id_and_fitness2.append([relocate_ind , fitmess4])
                         del self.all_afternoon_customer_id_and_fitness2[i]
                         break
             
             for i in range(len(self.all_afternoon_customer_id_and_fitness3)):
-                fitness1 = satellite_calculate_fitness(self.all_afternoon_customer_id_and_fitness3[i][0] , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[2])
+                fitness1 = satellite_calculate_fitness(self.all_afternoon_customer_id_and_fitness3[i][0] , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[2])
                 
                 exchange_ind = exchange(self.all_afternoon_customer_id_and_fitness3[i][0] , self.se_vehicle_capacity , self.json_instance)
                 if find_smae(self.all_afternoon_customer_id_and_fitness3 , exchange_ind):
-                    fitmess2 = satellite_calculate_fitness(exchange_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[2])
+                    fitmess2 = satellite_calculate_fitness(exchange_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[2])
                     if fitness1[1] > fitmess2[1]:
                         self.all_afternoon_customer_id_and_fitness3.append([exchange_ind , fitmess2])
                         del self.all_afternoon_customer_id_and_fitness3[i]
@@ -928,7 +913,7 @@ class NSGAAlgorithm(object):
                 
                 opt2_ind = opt2(self.all_afternoon_customer_id_and_fitness3[i][0] , self.se_vehicle_capacity , self.json_instance)
                 if find_smae(self.all_afternoon_customer_id_and_fitness3 , opt2_ind):
-                    fitmess3 = satellite_calculate_fitness(opt2_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[2])
+                    fitmess3 = satellite_calculate_fitness(opt2_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[2])
                     if fitness1[1] > fitmess3[1]:
                         self.all_afternoon_customer_id_and_fitness3.append([opt2_ind , fitmess3])
                         del self.all_afternoon_customer_id_and_fitness3[i]
@@ -936,35 +921,11 @@ class NSGAAlgorithm(object):
                 
                 relocate_ind = relocate(self.all_afternoon_customer_id_and_fitness3[i][0] , self.se_vehicle_capacity , self.json_instance)
                 if find_smae(self.all_afternoon_customer_id_and_fitness3 , relocate_ind):
-                    fitmess4 = satellite_calculate_fitness(relocate_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[2])
+                    fitmess4 = satellite_calculate_fitness(relocate_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[2])
                     if fitness1[1] > fitmess4[1]:
                         self.all_afternoon_customer_id_and_fitness3.append([relocate_ind , fitmess4])
                         del self.all_afternoon_customer_id_and_fitness3[i]
                         break
-            for i in range(len(self.all_afternoon_customer_id_and_fitness4)):
-                fitness1 = satellite_calculate_fitness(self.all_afternoon_customer_id_and_fitness4[i][0] , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[3])   
-                exchange_ind = exchange(self.all_afternoon_customer_id_and_fitness4[i][0] , self.se_vehicle_capacity , self.json_instance)
-                if find_smae(self.all_afternoon_customer_id_and_fitness4 , exchange_ind):
-                    fitmess2 = satellite_calculate_fitness(exchange_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[3])
-                    if fitness1[1] > fitmess2[1]:
-                        self.all_afternoon_customer_id_and_fitness4.append([exchange_ind , fitmess2])
-                        del self.all_afternoon_customer_id_and_fitness4[i]
-                        break
-                opt2_ind = opt2(self.all_afternoon_customer_id_and_fitness4[i][0] , self.se_vehicle_capacity , self.json_instance)
-                if find_smae(self.all_afternoon_customer_id_and_fitness4 , opt2_ind):
-                    fitmess3 = satellite_calculate_fitness(opt2_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[3])
-                    if fitness1[1] > fitmess3[1]:
-                        self.all_afternoon_customer_id_and_fitness4.append([opt2_ind , fitmess3])
-                        del self.all_afternoon_customer_id_and_fitness4[i]
-                        break
-                relocate_ind = relocate(self.all_afternoon_customer_id_and_fitness4[i][0] , self.se_vehicle_capacity , self.json_instance)
-                if find_smae(self.all_afternoon_customer_id_and_fitness4 , relocate_ind):
-                    fitmess4 = satellite_calculate_fitness(relocate_ind , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[3])
-                    if fitness1[1] > fitmess4[1]:
-                        self.all_afternoon_customer_id_and_fitness4.append([relocate_ind , fitmess4])
-                        del self.all_afternoon_customer_id_and_fitness4[i]
-                        break
-
             # 交配
             if len(self.all_morning_customer_id_and_fitness1[0][0]) > 5 and self.crossover_probability >= random.random():
                 while(len(self.all_morning_customer_id_and_fitness1) < 40):
@@ -972,10 +933,10 @@ class NSGAAlgorithm(object):
                         if i + 1 < len(self.all_morning_customer_id_and_fitness1):
                             ind1, ind2  = cxOrderedVrp(self.all_morning_customer_id_and_fitness1[i][0] , self.all_morning_customer_id_and_fitness1[i + 1][0])
                             if find_smae(self.all_morning_customer_id_and_fitness1 , ind1):
-                                fitness1 = satellite_calculate_fitness(ind1 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[0])
+                                fitness1 = satellite_calculate_fitness(ind1 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[0])
                                 self.all_morning_customer_id_and_fitness1.append([ind1 , fitness1])
                             if find_smae(self.all_morning_customer_id_and_fitness1 , ind2):
-                                fitness2 = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[0])
+                                fitness2 = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[0])
                                 self.all_morning_customer_id_and_fitness1.append([ind2 , fitness2])
             if self.all_morning_customer_id_and_fitness2:
                 if len(self.all_morning_customer_id_and_fitness2[0][0]) > 5 and self.crossover_probability >= random.random():
@@ -984,10 +945,10 @@ class NSGAAlgorithm(object):
                             if i + 1 < len(self.all_morning_customer_id_and_fitness2):
                                 ind1, ind2  = cxOrderedVrp(self.all_morning_customer_id_and_fitness2[i][0] , self.all_morning_customer_id_and_fitness2[i + 1][0])
                                 if find_smae(self.all_morning_customer_id_and_fitness2 , ind1):
-                                    fitness1 = satellite_calculate_fitness(ind1 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[1])
+                                    fitness1 = satellite_calculate_fitness(ind1 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[1])
                                     self.all_morning_customer_id_and_fitness2.append([ind1 , fitness1])
                                 if find_smae(self.all_morning_customer_id_and_fitness2 , ind2):
-                                    fitness2 = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[1])
+                                    fitness2 = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[1])
                                     self.all_morning_customer_id_and_fitness2.append([ind2 , fitness2])
             if self.all_morning_customer_id_and_fitness3:
                 if len(self.all_morning_customer_id_and_fitness3[0][0]) > 5 and self.crossover_probability >= random.random():
@@ -996,23 +957,12 @@ class NSGAAlgorithm(object):
                             if i + 1 < len(self.all_morning_customer_id_and_fitness3):
                                 ind1, ind2  = cxOrderedVrp(self.all_morning_customer_id_and_fitness3[i][0] , self.all_morning_customer_id_and_fitness3[i + 1][0])
                                 if find_smae(self.all_morning_customer_id_and_fitness3 , ind1):
-                                    fitness1 = satellite_calculate_fitness(ind1 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[2])
+                                    fitness1 = satellite_calculate_fitness(ind1 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[2])
                                     self.all_morning_customer_id_and_fitness3.append([ind1 , fitness1])
                                 if find_smae(self.all_morning_customer_id_and_fitness3 , ind2):
-                                    fitness2 = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[2])
+                                    fitness2 = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[2])
                                     self.all_morning_customer_id_and_fitness3.append([ind2 , fitness2])
-            if self.all_morning_customer_id_and_fitness4:
-                if len(self.all_morning_customer_id_and_fitness4[0][0]) > 5 and self.crossover_probability >= random.random():
-                    while(len(self.all_morning_customer_id_and_fitness4) < 40):
-                        for i in range(0 , len(self.all_morning_customer_id_and_fitness4) , 2):
-                            if i + 1 < len(self.all_morning_customer_id_and_fitness4):
-                                ind1, ind2  = cxOrderedVrp(self.all_morning_customer_id_and_fitness4[i][0] , self.all_morning_customer_id_and_fitness4[i + 1][0])
-                                if find_smae(self.all_morning_customer_id_and_fitness4 , ind1):
-                                    fitness1 = satellite_calculate_fitness(ind1 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[3])
-                                    self.all_morning_customer_id_and_fitness4.append([ind1 , fitness1])
-                                if find_smae(self.all_morning_customer_id_and_fitness4 , ind2):
-                                    fitness2 = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[3])
-                                    self.all_morning_customer_id_and_fitness4.append([ind2 , fitness2])
+
 
             if len(self.all_afternoon_customer_id_and_fitness1[0][0]) > 5 and self.crossover_probability >= random.random():
                 while(len(self.all_afternoon_customer_id_and_fitness1) < 40):
@@ -1021,10 +971,10 @@ class NSGAAlgorithm(object):
                         
                             ind1, ind2  = cxOrderedVrp(self.all_afternoon_customer_id_and_fitness1[i][0] , self.all_afternoon_customer_id_and_fitness1[i + 1][0])
                             if find_smae(self.all_afternoon_customer_id_and_fitness1 , ind1):
-                                fitness1 = satellite_calculate_fitness(ind1 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[0])
+                                fitness1 = satellite_calculate_fitness(ind1 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[0])
                                 self.all_afternoon_customer_id_and_fitness1.append([ind1 , fitness1])
                             if find_smae(self.all_afternoon_customer_id_and_fitness1 , ind2):
-                                fitness2 = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[0])
+                                fitness2 = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[0])
                                 self.all_afternoon_customer_id_and_fitness1.append([ind2 , fitness2])
             if self.all_afternoon_customer_id_and_fitness2:
                 if len(self.all_afternoon_customer_id_and_fitness2[0][0]) > 5 and self.crossover_probability >= random.random():
@@ -1033,10 +983,10 @@ class NSGAAlgorithm(object):
                             if i + 1 < len(self.all_afternoon_customer_id_and_fitness2):
                                 ind1, ind2  = cxOrderedVrp(self.all_afternoon_customer_id_and_fitness2[i][0] , self.all_afternoon_customer_id_and_fitness2[i + 1][0])
                                 if find_smae(self.all_afternoon_customer_id_and_fitness2 , ind1):
-                                    fitness1 = satellite_calculate_fitness(ind1 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[1])
+                                    fitness1 = satellite_calculate_fitness(ind1 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[1])
                                     self.all_afternoon_customer_id_and_fitness2.append([ind1 , fitness1])
                                 if find_smae(self.all_afternoon_customer_id_and_fitness2 , ind2):
-                                    fitness2 = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[1])
+                                    fitness2 = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[1])
                                     self.all_afternoon_customer_id_and_fitness2.append([ind2 , fitness2])
             if self.all_afternoon_customer_id_and_fitness3:
                 if len(self.all_afternoon_customer_id_and_fitness3[0][0]) > 5 and self.crossover_probability >= random.random():
@@ -1045,30 +995,19 @@ class NSGAAlgorithm(object):
                             if i + 1 < len(self.all_afternoon_customer_id_and_fitness3):
                                 ind1, ind2  = cxOrderedVrp(self.all_afternoon_customer_id_and_fitness3[i][0] , self.all_afternoon_customer_id_and_fitness3[i + 1][0])
                                 if find_smae(self.all_afternoon_customer_id_and_fitness3 , ind1):
-                                    fitness1 = satellite_calculate_fitness(ind1 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[2])
+                                    fitness1 = satellite_calculate_fitness(ind1 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[2])
                                     self.all_afternoon_customer_id_and_fitness3.append([ind1 , fitness1])
                                 if find_smae(self.all_afternoon_customer_id_and_fitness3 , ind2):
-                                    fitness2 = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[2])
+                                    fitness2 = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[2])
                                     self.all_afternoon_customer_id_and_fitness3.append([ind2 , fitness2])
-            if self.all_afternoon_customer_id_and_fitness4:
-                if len(self.all_afternoon_customer_id_and_fitness4[0][0]) > 5 and self.crossover_probability >= random.random():
-                    while(len(self.all_afternoon_customer_id_and_fitness4) < 40):
-                        for i in range(0 , len(self.all_afternoon_customer_id_and_fitness4) , 2):
-                            if i + 1 < len(self.all_afternoon_customer_id_and_fitness4):
-                                ind1, ind2  = cxOrderedVrp(self.all_afternoon_customer_id_and_fitness4[i][0] , self.all_afternoon_customer_id_and_fitness4[i + 1][0])
-                                if find_smae(self.all_afternoon_customer_id_and_fitness4 , ind1):
-                                    fitness1 = satellite_calculate_fitness(ind1 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[3])
-                                    self.all_afternoon_customer_id_and_fitness4.append([ind1 , fitness1])
-                                if find_smae(self.all_afternoon_customer_id_and_fitness4 , ind2):
-                                    fitness2 = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[3])
-                                    self.all_afternoon_customer_id_and_fitness4.append([ind2 , fitness2])
+
 
             # 突變
             if len(self.all_morning_customer_id_and_fitness1[0][0]) > 4:
                 for i in self.all_morning_customer_id_and_fitness1:
                     ind2 = mutation(i[0] , self.mut_prob)
                     if find_smae(self.all_morning_customer_id_and_fitness1 , ind2):
-                        fitness = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[0])
+                        fitness = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[0])
                         self.all_morning_customer_id_and_fitness1.append([ind2 , fitness])
                         break
             if self.all_morning_customer_id_and_fitness2:
@@ -1076,7 +1015,7 @@ class NSGAAlgorithm(object):
                     for i in self.all_morning_customer_id_and_fitness2:
                         ind2 = mutation(i[0] , self.mut_prob)
                         if find_smae(self.all_morning_customer_id_and_fitness2 , ind2):
-                            fitness = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[1])
+                            fitness = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[1])
                             self.all_morning_customer_id_and_fitness2.append([ind2 , fitness]) 
                             break
             if self.all_morning_customer_id_and_fitness3:
@@ -1084,23 +1023,15 @@ class NSGAAlgorithm(object):
                     for i in self.all_morning_customer_id_and_fitness3:
                         ind2 = mutation(i[0] , self.mut_prob)
                         if find_smae(self.all_morning_customer_id_and_fitness3 , ind2):
-                            fitness = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[2])  
+                            fitness = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.depot[2])  
                             self.all_morning_customer_id_and_fitness3.append([ind2 , fitness]) 
                             break
-            if self.all_morning_customer_id_and_fitness4:
-                if len(self.all_morning_customer_id_and_fitness4[0][0]) > 4:
-                    for i in self.all_morning_customer_id_and_fitness4:
-                        ind2 = mutation(i[0] , self.mut_prob)
-                        if find_smae(self.all_morning_customer_id_and_fitness4 , ind2):
-                            fitness = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 540 , satellite = self.centers[3])  
-                            self.all_morning_customer_id_and_fitness4.append([ind2 , fitness]) 
-                            break
-            
+
             if len(self.all_afternoon_customer_id_and_fitness1[0][0]) > 4:
                 for i in self.all_afternoon_customer_id_and_fitness1:
                     ind2 = mutation(i[0] , self.mut_prob)
                     if find_smae(self.all_afternoon_customer_id_and_fitness1 , ind2):
-                        fitness = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[0])  
+                        fitness = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[0])  
                         self.all_afternoon_customer_id_and_fitness1.append([ind2 , fitness]) 
                         break
             if self.all_afternoon_customer_id_and_fitness2:
@@ -1108,7 +1039,7 @@ class NSGAAlgorithm(object):
                     for i in self.all_afternoon_customer_id_and_fitness2:
                         ind2 = mutation(i[0] , self.mut_prob)
                         if find_smae(self.all_afternoon_customer_id_and_fitness2 , ind2):
-                            fitness = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[1])         
+                            fitness = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[1])         
                             self.all_afternoon_customer_id_and_fitness2.append([ind2 , fitness])  
                             break
             if self.all_afternoon_customer_id_and_fitness3:
@@ -1116,17 +1047,10 @@ class NSGAAlgorithm(object):
                     for i in self.all_afternoon_customer_id_and_fitness3:
                         ind2 = mutation(i[0] , self.mut_prob)
                         if find_smae(self.all_afternoon_customer_id_and_fitness3 , ind2):
-                            fitness = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[2])  
+                            fitness = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.depot[2])  
                             self.all_afternoon_customer_id_and_fitness3.append([ind2 , fitness]) 
                             break
-            if self.all_afternoon_customer_id_and_fitness4:
-                if len(self.all_afternoon_customer_id_and_fitness4[0][0]) > 4:
-                    for i in self.all_afternoon_customer_id_and_fitness4:
-                        ind2 = mutation(i[0] , self.mut_prob)
-                        if find_smae(self.all_afternoon_customer_id_and_fitness4 , ind2):
-                            fitness = satellite_calculate_fitness(ind2 , self.se_vehicle_speed , self.se_vehicle_capacity , self.json_instance , time_vehicles = 720 , satellite = self.centers[3])  
-                            self.all_afternoon_customer_id_and_fitness4.append([ind2 , fitness]) 
-                            break
+
 
             # non-dominated sorting
             front = non_dominated_sorting(self.all_morning_customer_id_and_fitness1)
@@ -1145,10 +1069,7 @@ class NSGAAlgorithm(object):
                 front = non_dominated_sorting(self.all_morning_customer_id_and_fitness3)
                 population_list,new_pop=selection(self.pop_size,front,self.all_morning_customer_id_and_fitness3)
                 self.all_morning_customer_id_and_fitness3 = population_list
-            if self.all_morning_customer_id_and_fitness4:
-                front = non_dominated_sorting(self.all_morning_customer_id_and_fitness4)
-                population_list,new_pop=selection(self.pop_size,front,self.all_morning_customer_id_and_fitness4)
-                self.all_morning_customer_id_and_fitness4 = population_list
+
             
             # non-dominated sorting
             front = non_dominated_sorting(self.all_afternoon_customer_id_and_fitness1)
@@ -1165,13 +1086,9 @@ class NSGAAlgorithm(object):
                 front = non_dominated_sorting(self.all_afternoon_customer_id_and_fitness3)
                 population_list,new_pop=selection(self.pop_size,front,self.all_afternoon_customer_id_and_fitness3)
                 self.all_afternoon_customer_id_and_fitness3 = population_list
-            if self.all_afternoon_customer_id_and_fitness4:
-                front = non_dominated_sorting(self.all_afternoon_customer_id_and_fitness4)
-                population_list,new_pop=selection(self.pop_size,front,self.all_afternoon_customer_id_and_fitness4)
-                self.all_afternoon_customer_id_and_fitness4 = population_list
 
-            # self.score_history.append((self.all_morning_customer_id_and_fitness1[0][1][1] + self.all_morning_customer_id_and_fitness2[0][1][1] + self.all_afternoon_customer_id_and_fitness1[0][1][1]+
-            #                           self.all_afternoon_customer_id_and_fitness2[0][1][1]))
+
+
 
     def result(self):
         
@@ -1187,10 +1104,6 @@ class NSGAAlgorithm(object):
             front = non_dominated_sorting(self.all_morning_customer_id_and_fitness3)
             best_all_morning_customer_id_and_fitness3=selection(self.pop_size,front[0],self.all_morning_customer_id_and_fitness3 , best=True)
             self.satellite_demand.append(calculate_satellite_demand(self.json_instance , best_all_morning_customer_id_and_fitness3[0][0]))
-        if self.all_morning_customer_id_and_fitness4:
-            front = non_dominated_sorting(self.all_morning_customer_id_and_fitness4)
-            best_all_morning_customer_id_and_fitness4=selection(self.pop_size,front[0],self.all_morning_customer_id_and_fitness4 , best=True)
-            self.satellite_demand.append(calculate_satellite_demand(self.json_instance , best_all_morning_customer_id_and_fitness4[0][0]))
 
         front = non_dominated_sorting(self.all_afternoon_customer_id_and_fitness1)
         best_all_afternoon_customer_id_and_fitness1=selection(self.pop_size,front[0],self.all_afternoon_customer_id_and_fitness1 , best=True)
@@ -1203,31 +1116,15 @@ class NSGAAlgorithm(object):
             front = non_dominated_sorting(self.all_afternoon_customer_id_and_fitness3)
             best_all_afternoon_customer_id_and_fitness3=selection(self.pop_size,front[0],self.all_afternoon_customer_id_and_fitness3 , best=True)
             self.satellite_demand[2] += calculate_satellite_demand(self.json_instance , best_all_afternoon_customer_id_and_fitness3[0][0])
-        if self.all_afternoon_customer_id_and_fitness4:
-            front = non_dominated_sorting(self.all_afternoon_customer_id_and_fitness4)
-            best_all_afternoon_customer_id_and_fitness4=selection(self.pop_size,front[0],self.all_afternoon_customer_id_and_fitness4 , best=True)
-            self.satellite_demand[3] += calculate_satellite_demand(self.json_instance , best_all_afternoon_customer_id_and_fitness4[0][0])
 
-        if self.number_satellite == 1:
-            self.all_number_vehicles = sum([best_all_morning_customer_id_and_fitness1[0][1][0] , best_all_afternoon_customer_id_and_fitness1[0][1][0]])
-            self.SE_all_cost = sum([best_all_morning_customer_id_and_fitness1[0][1][1] , best_all_afternoon_customer_id_and_fitness1[0][1][1]])
-        elif self.number_satellite == 2:
-            self.all_number_vehicles = sum([best_all_morning_customer_id_and_fitness1[0][1][0] , best_all_afternoon_customer_id_and_fitness1[0][1][0] , best_all_morning_customer_id_and_fitness2[0][1][0]  , best_all_afternoon_customer_id_and_fitness2[0][1][0]])    
-            self.SE_all_cost = sum([best_all_morning_customer_id_and_fitness1[0][1][1] , best_all_afternoon_customer_id_and_fitness1[0][1][1] , best_all_morning_customer_id_and_fitness2[0][1][1]  , best_all_afternoon_customer_id_and_fitness2[0][1][1]])
-        elif self.number_satellite == 3:
-            self.all_number_vehicles = sum([best_all_morning_customer_id_and_fitness1[0][1][0] , best_all_afternoon_customer_id_and_fitness1[0][1][0] , best_all_morning_customer_id_and_fitness2[0][1][0]  , best_all_afternoon_customer_id_and_fitness2[0][1][0], best_all_afternoon_customer_id_and_fitness3[0][1][0] , best_all_morning_customer_id_and_fitness3[0][1][0]])
-            self.SE_all_cost = sum([best_all_morning_customer_id_and_fitness1[0][1][1] , best_all_afternoon_customer_id_and_fitness1[0][1][1] , best_all_morning_customer_id_and_fitness2[0][1][1]  , best_all_afternoon_customer_id_and_fitness2[0][1][1] , best_all_afternoon_customer_id_and_fitness3[0][1][1] , best_all_morning_customer_id_and_fitness3[0][1][1]])
-        else:
-            self.all_number_vehicles = sum([best_all_morning_customer_id_and_fitness1[0][1][0] , best_all_afternoon_customer_id_and_fitness1[0][1][0] , best_all_morning_customer_id_and_fitness2[0][1][0]  , best_all_afternoon_customer_id_and_fitness2[0][1][0], best_all_afternoon_customer_id_and_fitness3[0][1][0] , best_all_afternoon_customer_id_and_fitness4[0][1][0] , best_all_morning_customer_id_and_fitness3[0][1][0] , best_all_morning_customer_id_and_fitness4[0][1][0]])
-            self.SE_all_cost = sum([best_all_morning_customer_id_and_fitness1[0][1][1] , best_all_afternoon_customer_id_and_fitness1[0][1][1] , best_all_morning_customer_id_and_fitness2[0][1][1]  , best_all_afternoon_customer_id_and_fitness2[0][1][1] , best_all_afternoon_customer_id_and_fitness3[0][1][1] , best_all_afternoon_customer_id_and_fitness4[0][1][1] , best_all_morning_customer_id_and_fitness3[0][1][1] , best_all_morning_customer_id_and_fitness4[0][1][1]])
 
+
+        self.all_number_vehicles = sum([best_all_morning_customer_id_and_fitness1[0][1][0] , best_all_afternoon_customer_id_and_fitness1[0][1][0] , best_all_morning_customer_id_and_fitness2[0][1][0]  , best_all_afternoon_customer_id_and_fitness2[0][1][0], best_all_afternoon_customer_id_and_fitness3[0][1][0] , best_all_morning_customer_id_and_fitness3[0][1][0]])
+        self.SE_all_cost = sum([best_all_morning_customer_id_and_fitness1[0][1][1] , best_all_afternoon_customer_id_and_fitness1[0][1][1] , best_all_morning_customer_id_and_fitness2[0][1][1]  , best_all_afternoon_customer_id_and_fitness2[0][1][1] , best_all_afternoon_customer_id_and_fitness3[0][1][1] , best_all_morning_customer_id_and_fitness3[0][1][1]])
         
         
-        self.SE_all_cost += self.all_number_vehicles * 50 + self.number_satellite * 1000
+        self.SE_all_cost += self.all_number_vehicles * 50
 
-    def First_route(self):
-        gurobi_Model = FE_gurobi()
-        self.FE_all_cost = gurobi_Model.main(self.depot , self.number_satellite , self.centers , list(range(0,self.number_satellite)) , self.satellite_demand , self.fe_vehicle_capacity)
 
     def Computation_time(self):
         self.all_time = time.time() -  self.start_time
@@ -1236,65 +1133,42 @@ class NSGAAlgorithm(object):
         self.load_instance()
         # self.filter_customers_in_china()
         # self.show_customer_on_china_map()
-        # self.initial_solution()
-        # self.initial_population()
-        # self.runGenerations()
-        # self.result()
-        # self.First_route()
+        self.initial_solution()
+        self.initial_population()
+        self.runGenerations()
+        self.result()
+
         # self.Computation_time()
+
+    def runMain(self):
+        self.load_instance()
+        # self.filter_customers_in_china()
+        # self.show_customer_on_china_map()
+        self.initial_solution()
+        self.initial_population()
+        self.runGenerations()
+        self.result()
+        # self.First_route()
+        self.Computation_time()
 
 if __name__ == "__main__":
     print("Running file directly, Executing nsga2vrp")
 
-    S = [2, 3]
-    C = [0.7 , 0.55]
+    C = [0.85 , 0.85]
     M = [0.6 , 1.0]
     select = 0
-    start , end = 3000 , 3049
+    start , end = 2200 , 2299
     # 開啟輸出檔案
-    with open("test_result2.txt", "w", encoding="utf-8") as f:
-        for i in range(1,21):
-            if i <= 10:
-                select = 0
-            else:
-                select = 1
+    with open("OR_test_result2.txt", "w", encoding="utf-8") as f:
+        for i in range(23,31):
             model = NSGAAlgorithm()
             model.start_customer_number = start
             model.end_customer_number = end
-            model.crossover_probability = C[select]
-            model.mut_prob = M[select]
-            model.number_satellite = S[select]  
+            model.crossover_probability = 0.85
+            model.mut_prob = 0.5
             model.runMain()
-            total = model.SE_all_cost + model.FE_all_cost
-            result_line = f"測試:{i} , 開始:{start} ~ 結束:{end} ,交配率: {C[select]} , 突變率:{M[select]} → Avg Total Cost: {total:.2f} , 衛星數量: {S[select]}"
+            total = model.SE_all_cost
+            result_line = f"第{i}天 , 開始:{start} ~ 結束:{end} ,交配率: {model.crossover_probability} , 突變率:{model.mut_prob} → Avg Total Cost: {total:.2f}"
             print(result_line)
             f.write(result_line + "\n")
-            if i < 10:
-                start = end + 1
-                end = start + 49  
-            else:   
-                start = end + 1
-                end = start + 79
-        # for instance_id, (start, end) in enumerate(instances, 1):
-        #     f.write(f"=== Instance {instance_id}: Customer {start} ~ {end}, Satellite: {S[instance_id - 1]} ===\n")
-        #     print(f"\n=== Instance {instance_id}: Customer {start} ~ {end} ===")
-        #       # 初始 crossover probability
-        #     
-        #     while M <= 1:
-        #         avg_cost = 0
-        #         for repeat in range(5):
-        #             model = NSGAAlgorithm()
-        #             model.start_customer_number = start
-        #             model.end_customer_number = end
-        #             model.number_satellite = S[instance_id]
-        #             model.crossover_probability = C
-        #             model.mut_prob = M
-        #             model.runMain()
-        #             total = model.SE_all_cost + model.FE_all_cost
-        #             avg_cost += total
-        #         avg_cost /= 5
-
-        #         result_line = f"Crossover Probability: {C:.2f} , 突變率:{M:.2f} → Avg Total Cost: {avg_cost:.2f} , 衛星數量: {S[instance_id - 1]}"
-        #         print(result_line)
-        #         f.write(result_line + "\n")
-        #         M += 0.1
+            start, end = start + 100, end + 100
