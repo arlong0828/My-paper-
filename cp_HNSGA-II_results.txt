@@ -1,0 +1,22 @@
+=== Instance 1: Customer 3000 ~ 3049, Satellite: 2 ===
+Crossover Probability: 0.85 → Avg Total Cost: 7718.41 , 衛星數量: 2
+Crossover Probability: 0.80 → Avg Total Cost: 7798.38 , 衛星數量: 2
+Crossover Probability: 0.75 → Avg Total Cost: 7890.53 , 衛星數量: 2
+Crossover Probability: 0.70 → Avg Total Cost: 7674.20 , 衛星數量: 2
+Crossover Probability: 0.65 → Avg Total Cost: 7961.09 , 衛星數量: 2
+Crossover Probability: 0.60 → Avg Total Cost: 7826.14 , 衛星數量: 2
+Crossover Probability: 0.55 → Avg Total Cost: 7823.84 , 衛星數量: 2
+Crossover Probability: 0.50 → Avg Total Cost: 8025.66 , 衛星數量: 2
+Crossover Probability: 0.45 → Avg Total Cost: 7808.07 , 衛星數量: 2
+Crossover Probability: 0.40 → Avg Total Cost: 7725.4 , 衛星數量: 2
+=== Instance 2: Customer 3500 ~ 3579, Satellite: 3 ===
+Crossover Probability: 0.85 → Avg Total Cost: 9778.38 , 衛星數量: 3
+Crossover Probability: 0.80 → Avg Total Cost: 9437.06 , 衛星數量: 3
+Crossover Probability: 0.75 → Avg Total Cost: 9838.42 , 衛星數量: 3
+Crossover Probability: 0.70 → Avg Total Cost: 10230.44 , 衛星數量: 3
+Crossover Probability: 0.65 → Avg Total Cost: 9556.40 , 衛星數量: 3
+Crossover Probability: 0.60 → Avg Total Cost: 9265.66 , 衛星數量: 3
+Crossover Probability: 0.55 → Avg Total Cost: 8977.46 , 衛星數量: 3
+Crossover Probability: 0.50 → Avg Total Cost: 9370.23 , 衛星數量: 3
+Crossover Probability: 0.45 → Avg Total Cost: 9692.91 , 衛星數量: 3
+Crossover Probability: 0.40 → Avg Total Cost: 9490.6 , 衛星數量: 3
