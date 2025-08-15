@@ -1,4 +1,4 @@
-<img width="677" height="137" alt="圖片" src="https://github.com/user-attachments/assets/27a9ec42-3107-4084-8431-1c1df523974f" /># Two-Echelon Multi-Depot Multi-Day Multi-Period Capacitated Vehicle Routing Problem with Simultaneous Pickup and Delivery (2E-MD-MD-MP-CVRP-SPD)
+# Two-Echelon Multi-Depot Multi-Day Multi-Period Capacitated Vehicle Routing Problem with Simultaneous Pickup and Delivery (2E-MD-MD-MP-CVRP-SPD)
 
 本專案針對具**同時取送貨特性**的**二層次多倉庫多日多期間容量限制車輛路徑問題**（2E-MD-MD-MP-CVRP-SPD）提出一套優化演算法架構，能有效處理中國沿岸地區真實顧客資料，並於短時間內產出具品質的最適配送路徑。
 
